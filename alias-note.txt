@@ -1,0 +1,2 @@
+Next.js path alias is used by lib/prisma.ts. Add this to tsconfig if required by your environment:
+"baseUrl":".","paths":{"@/*":["./*"]}

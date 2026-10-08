@@ -1,0 +1,11 @@
+SUNDER COMPUTERS - ADD PRODUCT V3
+
+This version fixes the Prisma schema mismatch and adds retail price comparison.
+
+Prisma schema now includes Product fields, ProductImage and RetailListing.
+RetailListing stores retailer name, price and URL. Average retail price is calculated automatically from all valid retail listings.
+
+After copying the project, run: npx prisma db push
+Then restart the dev server.
+
+Do NOT use prisma migrate reset or delete dev.db.

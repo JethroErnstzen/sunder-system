@@ -1,0 +1,2 @@
+import Link from 'next/link';
+export default function Register(){return <main className="simple-page account-page"><Link href="/">← Back to Sunder</Link><h1>Create your account</h1><p>Save your details and make future Sunder purchases faster.</p><form><label>Full name<input type="text" /></label><label>Email<input type="email" /></label><label>Password<input type="password" /></label><button type="button">Create account</button></form><p>Already have an account? <Link href="/login">Sign in</Link></p></main>}

@@ -1,0 +1,131 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Product {
+  id             String          @id @default(cuid())
+  stockNumber    String          @unique
+  name           String
+  brand          String?
+  model          String?
+  condition      String          @default("Pre-owned")
+  category       String?
+  cpu            String?
+  ram            String?
+  storage        String?
+  screen         String?
+  screenSize     Float?
+  hasNumpad      Boolean?
+  gpu            String?
+  warranty       String?
+  description    String?
+  costPrice      Float?
+  sellingPrice   Float?
+  salePrice      Float?
+  retailPrice    Float?
+  quantity       Int             @default(0)
+  status         String          @default("active")
+  listedAt       DateTime?
+  soldAt         DateTime?
+  archivedAt     DateTime?
+  serialNumber   String?
+  supplier       String?
+  purchaseDate   DateTime?
+  websiteActive  Boolean         @default(false)
+  googleActive   Boolean         @default(false)
+  metaActive     Boolean         @default(false)
+  takealotActive Boolean         @default(false)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  images         ProductImage[]
+  retailListings RetailListing[]
+  orderItems     OrderItem[]
+}
+
+model ProductImage {
+  id        String  @id @default(cuid())
+  productId String
+  url       String
+  sortOrder Int     @default(0)
+  isPrimary Boolean @default(false)
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model RetailListing {
+  id        String  @id @default(cuid())
+  productId String
+  retailer  String
+  price     Float
+  url       String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model Order {
+  id                   String               @id @default(cuid())
+  orderNumber          String               @unique
+  status               String               @default("pending")
+  paymentStatus        String               @default("pending")
+  paymentMethod        String?
+  customerType         String               @default("private")
+  email                String
+  phone                String?
+  firstName            String?
+  lastName             String?
+  companyName          String?
+  vatNumber            String?
+  registrationNumber   String?
+  billingAddress       String?
+  billingSuburb        String?
+  billingCity          String?
+  billingProvince      String?
+  billingPostalCode    String?
+  shippingAddress      String?
+  shippingSuburb       String?
+  shippingCity         String?
+  shippingProvince     String?
+  shippingPostalCode   String?
+  subtotal             Float
+  shipping             Float              @default(0)
+  tax                  Float              @default(0)
+  total                Float
+  officeAddon          Boolean            @default(false)
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+  items                OrderItem[]
+  payments             PaymentTransaction[]
+}
+
+model OrderItem {
+  id          String   @id @default(cuid())
+  orderId     String
+  productId   String?
+  stockNumber String
+  name        String
+  condition   String?
+  quantity    Int
+  unitPrice   Float
+  lineTotal   Float
+  imageUrl    String?
+  product     Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+}
+
+model PaymentTransaction {
+  id           String   @id @default(cuid())
+  orderId      String
+  provider     String
+  status       String   @default("pending")
+  externalId   String?
+  externalRef  String?
+  rawResponse  String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  order        Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+}

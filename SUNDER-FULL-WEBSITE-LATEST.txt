@@ -1,0 +1,14 @@
+Sunder Computers - Full Website Latest
+Includes:
+- Latest live-inventory homepage
+- Shop connected to Prisma inventory
+- Add Product admin
+- Admin Inventory with editing and retail listing
+- Wide responsive product page
+- Interactive product image gallery
+- Product description before specifications
+- One retail comparison listing on customer-facing product page
+- FREE Nationwide Shipping wording
+- Dynamic retail saving amount and percentage
+Project remains on SQLite/Prisma for local development.
+Run locally on port 3001.

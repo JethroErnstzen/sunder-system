@@ -1,0 +1,16 @@
+SUNDER COMPUTERS - ADD PRODUCT V2
+
+What changed:
+- Product photos now upload to /public/uploads/products during local development.
+- Uploaded image URLs are saved as ProductImage records.
+- First photo is automatically the primary image.
+- Photos can be reordered before saving.
+- Live profit, margin and retail saving calculation.
+- Stock number duplicate protection.
+- Purchase date is converted to Prisma DateTime.
+- Save Product creates the database record and image records.
+
+Important:
+- This local upload method is suitable for development. For production hosting, move product images to persistent object storage/CDN rather than relying on the local public folder.
+- /admin/products is not authenticated yet. Authentication/admin permissions are a later step.
+- Do not mix this Sunder project with the WP Motors project.

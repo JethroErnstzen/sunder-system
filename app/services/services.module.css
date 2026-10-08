@@ -1,0 +1,126 @@
+.page {
+  --service-ink: #101820;
+  --service-muted: #59666f;
+  --service-line: #d9e0df;
+  --service-green: #087f67;
+  --service-lime: #d9ef62;
+  color: var(--service-ink);
+  overflow: hidden;
+}
+
+.hero,.services,.support,.closing { width: min(1280px, calc(100% - 72px)); margin: 0 auto; }
+.hero { min-height: 640px; display: grid; grid-template-columns: 1fr .92fr; align-items: center; gap: 72px; padding: 72px 0 78px; }
+.heroCopy { max-width: 640px; }
+.eyebrow { margin: 0 0 20px; color: var(--service-green); font-size: 12px; font-weight: 800; letter-spacing: .15em; }
+.hero h1 { margin: 0; font-family: Manrope, 'DM Sans', sans-serif; font-size: clamp(46px, 5.4vw, 76px); line-height: 1.02; }
+.hero h1 em { color: var(--service-green); font-style: normal; }
+.lead { max-width: 550px; margin: 26px 0 0; color: var(--service-muted); font-size: 20px; line-height: 1.6; }
+.actions { display: flex; align-items: center; flex-wrap: wrap; gap: 26px; margin-top: 32px; }
+.primary,.lightButton { min-height: 52px; display: inline-flex; align-items: center; justify-content: center; gap: 12px; padding: 0 20px; background: var(--service-green); color: #fff; font-size: 15px; font-weight: 800; }
+.primary:hover,.lightButton:hover { background: #05644f; }
+.textLink,.serviceLink,.darkLink,.whatsapp { color: var(--service-ink); font-size: 14px; font-weight: 800; }
+.textLink span { margin-left: 8px; color: var(--service-green); }
+.trustLine { display: flex; align-items: center; gap: 10px; margin-top: 40px; color: #63716e; font-size: 13px; }
+.trustLine span { width: 8px; height: 8px; background: var(--service-green); border-radius: 50%; }
+.heroVisual { position: relative; min-width: 0; aspect-ratio: 1.07 / 1; background: #d7dfdd; }
+.heroVisual img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.photoNote { position: absolute; left: 18px; bottom: 18px; display: grid; gap: 5px; padding: 16px 18px; background: #fff; }
+.photoNote span,.leaseAside small { color: #69746f; font-size: 10px; font-weight: 800; letter-spacing: .13em; }
+.photoNote strong { font-family: Manrope, sans-serif; font-size: 16px; }
+
+.services { display: grid; grid-template-columns: .72fr 1.28fr; gap: 76px; padding: 75px 0 100px; border-top: 1px solid var(--service-line); }
+.sectionIntro h2,.leasing h2,.support h2,.closing h2 { margin: 0; font-family: Manrope, 'DM Sans', sans-serif; font-size: clamp(34px, 4vw, 52px); line-height: 1.08; }
+.sectionIntro>p:last-child { max-width: 380px; margin: 20px 0 0; color: var(--service-muted); font-size: 16px; line-height: 1.65; }
+.serviceList { border-top: 1px solid var(--service-line); }
+.service { display: grid; grid-template-columns: 50px 1fr auto; align-items: start; gap: 20px; padding: 25px 0; border-bottom: 1px solid var(--service-line); }
+.serviceNumber { padding-top: 5px; color: var(--service-green); font-size: 12px; font-weight: 900; }
+.service h3 { margin: 0; font-family: Manrope, sans-serif; font-size: 21px; }
+.service p { max-width: 490px; margin: 8px 0 0; color: var(--service-muted); font-size: 14px; line-height: 1.6; }
+.serviceLink { white-space: nowrap; padding-top: 5px; }
+.serviceLink span,.darkLink span { padding-left: 6px; color: var(--service-green); }
+
+.leasing { display: grid; grid-template-columns: 1.1fr .9fr; background: #11211f; color: #f5f8f5; }
+.leasingCopy { max-width: 730px; justify-self: end; padding: 78px 72px 82px 36px; }
+.leasing .eyebrow { color: var(--service-lime); }
+.leasing h2 { font-size: clamp(40px, 4.5vw, 60px); }
+.leasingCopy>p:not(.eyebrow) { max-width: 590px; color: #cad5d0; font-size: 17px; line-height: 1.65; }
+.leasing ul { display: grid; gap: 13px; margin: 25px 0 30px; padding: 0; list-style: none; }
+.leasing li { display: flex; gap: 12px; color: #e4ebe7; font-size: 14px; line-height: 1.5; }
+.leasing li::before { content: '-'; color: var(--service-lime); font-weight: 900; }
+.lightButton { background: var(--service-lime); color: #14201d; }
+.lightButton:hover { background: #e8f88b; }
+.leaseAside { min-height: 420px; display: flex; flex-direction: column; justify-content: flex-end; padding: 42px; background: linear-gradient(150deg, #d9ef62, #bfdc48); color: #13211d; }
+.leaseMark { font-family: Manrope, sans-serif; font-size: clamp(82px, 12vw, 156px); font-weight: 800; line-height: .9; }
+.leaseAside p { max-width: 290px; margin: 22px 0; font-family: Manrope, sans-serif; font-size: 22px; font-weight: 700; line-height: 1.28; }
+.leaseRule { width: 100%; height: 1px; margin: 12px 0 18px; background: rgba(19,33,29,.28); }
+.leaseAside small { color: #344638; }
+
+.support { display: grid; grid-template-columns: 1fr 1fr; align-items: center; gap: 76px; padding: 104px 0; }
+.supportImage { position: relative; min-width: 0; aspect-ratio: 1.1 / 1; background: #dce3e0; }
+.supportImage img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.supportImage>span { position: absolute; left: 16px; bottom: 16px; padding: 12px 14px; background: var(--service-lime); color: #14201d; font-size: 10px; font-weight: 900; letter-spacing: .1em; }
+.supportCopy { max-width: 540px; }
+.supportCopy>p:not(.eyebrow) { margin: 20px 0 0; color: var(--service-muted); font-size: 17px; line-height: 1.7; }
+.supportPoints { margin: 28px 0; border-top: 1px solid var(--service-line); }
+.supportPoints>div { display: flex; gap: 17px; padding: 14px 0; border-bottom: 1px solid var(--service-line); font-size: 14px; }
+.supportPoints strong { min-width: 23px; color: var(--service-green); font-size: 11px; }
+.darkLink span { font-size: 18px; }
+.closing { display: flex; align-items: center; justify-content: space-between; gap: 36px; margin-bottom: 90px; padding: 42px 0; border-top: 1px solid var(--service-line); border-bottom: 1px solid var(--service-line); }
+.closing .eyebrow { margin-bottom: 12px; }
+.closing h2 { font-size: clamp(30px, 3.4vw, 42px); }
+.closing>div>p:last-child { margin: 12px 0 0; color: var(--service-muted); font-size: 15px; }
+.closingActions { display: grid; justify-items: start; gap: 16px; }
+.whatsapp { color: var(--service-green); }
+
+@media (max-width: 900px) {
+  .hero,.services,.support,.closing { width: min(100% - 40px, 700px); }
+  .hero { min-height: 0; grid-template-columns: 1fr; gap: 38px; padding: 60px 0 70px; }
+  .heroVisual { max-height: 470px; aspect-ratio: 1.35 / 1; }
+  .services { grid-template-columns: 1fr; gap: 34px; padding: 60px 0 76px; }
+  .sectionIntro h2 br { display: none; }
+  .leasing { grid-template-columns: 1fr; }
+  .leasingCopy { justify-self: stretch; max-width: 700px; margin: 0 auto; padding: 62px 32px; }
+  .leaseAside { min-height: 280px; padding: 30px 32px; }
+  .leaseMark { font-size: 100px; }
+  .support { grid-template-columns: 1fr; gap: 38px; padding: 76px 0; }
+  .supportImage { max-height: 480px; aspect-ratio: 1.3 / 1; }
+  .closing { align-items: start; flex-direction: column; margin-bottom: 60px; }
+}
+
+@media (max-width: 560px) {
+  .hero,.services,.support,.closing { width: min(100% - 32px, 480px); }
+  .hero { gap: 18px; padding: 24px 0 28px; }
+  .eyebrow { font-size: 10px; line-height: 1.5; }
+  .hero h1 { font-size: 37px; }
+  .lead { margin-top: 12px; font-size: 15px; line-height: 1.45; }
+  .actions { align-items: flex-start; flex-direction: column; gap: 11px; margin-top: 16px; }
+  .primary,.lightButton { min-height: 50px; width: 100%; padding: 0 14px; text-align: center; font-size: 14px; }
+  .trustLine { align-items: flex-start; margin-top: 17px; font-size: 12px; line-height: 1.5; }
+  .heroVisual,.supportImage { aspect-ratio: 16 / 10; max-height: 185px; }
+  .photoNote { left: 10px; bottom: 10px; padding: 12px; }
+  .photoNote span { font-size: 8px; }
+  .photoNote strong { font-size: 14px; }
+  .services { gap: 17px; padding: 28px 0 34px; }
+  .sectionIntro h2,.support h2 { font-size: 30px; }
+  .sectionIntro>p:last-child { margin-top: 10px; font-size: 14px; line-height: 1.45; }
+  .service { grid-template-columns: 28px 1fr; gap: 12px; padding: 14px 0; }
+  .serviceLink { grid-column: 2; padding-top: 0; white-space: normal; }
+  .service h3 { font-size: 19px; }
+  .service p { margin-top: 5px; font-size: 13px; line-height: 1.45; }
+  .leasingCopy { padding: 30px 20px 32px; }
+  .leasing h2 { font-size: 34px; }
+  .leasingCopy>p:not(.eyebrow) { margin: 11px 0; font-size: 15px; line-height: 1.45; }
+  .leasing ul { gap: 8px; margin: 14px 0 18px; }
+  .leaseAside { min-height: 165px; padding: 18px 20px; }
+  .leaseMark { font-size: 58px; }
+  .leaseAside p { margin: 8px 0; font-size: 16px; }
+  .leaseRule { margin: 6px 0 10px; }
+  .support { gap: 17px; padding: 32px 0; }
+  .supportCopy>p:not(.eyebrow) { margin-top: 10px; font-size: 15px; line-height: 1.45; }
+  .supportPoints { margin: 14px 0; }
+  .supportPoints>div { padding: 9px 0; font-size: 13px; }
+  .closing { gap: 15px; padding: 20px 0; margin-bottom: 26px; }
+  .closing h2 { font-size: 27px; }
+  .closing>div>p:last-child { margin-top: 7px; font-size: 13px; }
+  .closingActions { width: 100%; gap: 10px; }
+}

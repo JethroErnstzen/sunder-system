@@ -1,0 +1,59 @@
+.menuButton { display: none; }
+.mobileLinks { display: none; }
+
+@media (max-width: 650px) {
+  .desktopLinks { display: none; }
+  .menuButton {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 9px;
+    border: 1px solid rgba(255,255,255,.25);
+    border-radius: 4px;
+    background: transparent;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 800;
+  }
+  .menuButton span {
+    position: relative;
+    width: 16px;
+    height: 12px;
+    border-top: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+  }
+  .menuButton span::after {
+    position: absolute;
+    top: 4px;
+    left: 0;
+    width: 100%;
+    border-top: 2px solid currentColor;
+    content: '';
+  }
+  .mobileLinks {
+    position: absolute;
+    z-index: 100;
+    top: 100%;
+    left: -12px;
+    width: 100vw;
+    padding: 8px 16px 14px;
+    background: #071126;
+    border-top: 1px solid rgba(255,255,255,.14);
+    box-shadow: 0 14px 24px rgba(4,11,25,.22);
+  }
+  .mobileLinksOpen {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 2px 8px;
+  }
+  .mobileLinks a {
+    display: flex;
+    align-items: center;
+    min-height: 42px;
+    padding: 0 8px;
+    border-bottom: 1px solid rgba(255,255,255,.12);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 750;
+  }
+}

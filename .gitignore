@@ -1,0 +1,14 @@
+node_modules/
+.next/
+.env
+.env.*
+!.env.example
+*.db
+*.db-journal
+node_modules/
+.next/
+.env
+.env.*
+!.env.example
+*.db
+*.db-journal
