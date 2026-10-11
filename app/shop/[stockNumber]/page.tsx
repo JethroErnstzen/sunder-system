@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { prisma } from '@/lib/prisma'
 import ProductGallery from '@/app/components/ProductGallery'
 import AddToCartButton from '@/app/components/AddToCartButton'
+import StitchBNPLWidget from '@/app/components/StitchBNPLWidget'
 import styles from './product.module.css'
 
 export default async function ProductPage({ params }: { params: Promise<{ stockNumber: string }> }) {
@@ -29,6 +30,7 @@ export default async function ProductPage({ params }: { params: Promise<{ stockN
         <div className={styles.subtitle}>{[product.cpu,product.ram,product.storage].filter(Boolean).join(' • ')}</div>
         {salePrice && <div className={styles.comparison}><span className={styles.retail}>Price R <s>{Math.round(listedPrice).toLocaleString('en-ZA')}</s></span></div>}
         <div className={styles.price} style={salePrice ? { color: '#c33227' } : undefined}>{salePrice ? 'Special ' : ''}R {Math.round(sellingPrice).toLocaleString('en-ZA')} <small style={{fontSize:13,letterSpacing:0}}>incl. VAT</small></div>
+        {sellingPrice >= 100 && <div className={styles.bnpl}><StitchBNPLWidget price={sellingPrice} /></div>}
         {retailPrice && retailPrice > sellingPrice && <div className={styles.comparison}><span className={styles.retail}>Retail R {Math.round(retailPrice).toLocaleString('en-ZA')}</span><span className={styles.saving}>SAVE R {saved.toLocaleString('en-ZA')}</span></div>}
         <div className={styles.trust}><div className={styles.shipping}>FREE Nationwide Shipping</div><div>{product.warranty || 'Warranty included'}</div><div>Physical store in Bellville</div></div>
         {retailListing && <div className={styles.retailBox}><div className={styles.retailLabel}>Retail comparison</div><div className={styles.retailSingle}><div><strong>{retailListing.retailer}</strong><span>R {Math.round(retailListing.price).toLocaleString('en-ZA')}</span></div>{retailListing.url && <a href={retailListing.url} target="_blank" rel="noopener noreferrer">View retail listing ↗</a>}</div></div>}

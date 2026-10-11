@@ -1,15 +1,20 @@
 'use client'
 
-import { useEffect,useMemo,useState } from 'react'
+import { Suspense, useEffect,useMemo,useState } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import ProductCard from '@/app/components/ProductCard'
 import styles from './shop.module.css'
 
 type Product={id:string;stockNumber:string;name:string;brand:string;condition:string;cpu?:string|null;ram?:string|null;storage?:string|null;sellingPrice:number;salePrice?:number|null;retailPrice?:number|null;warranty?:string|null;quantity:number;images:{url:string}[]}
 const categories=['Laptops','Desktops','Components','Gadgets']; const conditions=['New','Demo','Pre-owned','Refurbished']; const ramOptions=['4GB','8GB','12GB','16GB','24GB','32GB','64GB']; const storageOptions=['128GB','256GB','512GB','1TB','2TB','4TB']
 export default function ShopPage(){
+ return <Suspense fallback={<main className={styles.page} aria-busy="true"><section className={styles.hero}><div className={styles.heroInner}><p>Loading products…</p></div></section></main>}><ShopContent/></Suspense>
+}
+function ShopContent(){
+ const searchParams=useSearchParams()
  const [products,setProducts]=useState<Product[]>([]),[q,setQ]=useState(''),[category,setCategory]=useState(''),[condition,setCondition]=useState(''),[brand,setBrand]=useState(''),[ram,setRam]=useState(''),[storage,setStorage]=useState(''),[sort,setSort]=useState('newest'),[saleOnly,setSaleOnly]=useState(false),[loading,setLoading]=useState(true)
- useEffect(()=>{const p=new URLSearchParams(location.search);setCategory(p.get('category')||'');setCondition(p.get('condition')||'');setQ(p.get('q')||'');setSaleOnly(p.get('onSale')==='true')},[])
+ useEffect(()=>{setCategory(searchParams.get('category')||'');setCondition(searchParams.get('condition')||'');setQ(searchParams.get('q')||'');setSaleOnly(searchParams.get('onSale')==='true')},[searchParams])
  const brands=useMemo(()=>Array.from(new Set(products.map(p=>p.brand).filter(Boolean))).sort(),[products])
  useEffect(()=>{const c=new AbortController();const t=setTimeout(async()=>{setLoading(true);try{const p=new URLSearchParams({take:'100'});if(q)p.set('q',q);if(category)p.set('category',category);if(condition)p.set('condition',condition);if(brand)p.set('brand',brand);if(ram)p.set('ram',ram);if(storage)p.set('storage',storage);p.set('sort',sort);const r=await fetch(`/api/products?${p}`,{signal:c.signal});const data=r.ok?await r.json():[];setProducts(saleOnly?data.filter((p:Product)=>Number(p.salePrice||0)>0&&Number(p.salePrice)<Number(p.sellingPrice||0)):data)}catch(e){if((e as Error).name!=='AbortError')setProducts([])}finally{setLoading(false)}},120);return()=>{clearTimeout(t);c.abort()}},[q,category,condition,brand,ram,storage,sort,saleOnly])
  const clear=()=>{setQ('');setCategory('');setCondition('');setBrand('');setRam('');setStorage('');setSort('newest')}
