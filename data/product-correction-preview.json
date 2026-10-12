@@ -1,0 +1,501 @@
+{
+  "mode": "APPLY",
+  "totalProducts": 44,
+  "productsWithProposedChanges": 40,
+  "changes": [
+    {
+      "stockNumber": "LAP1132",
+      "name": "Blackview MP60 [Celeron N5095, 8GB, 256GB SSD] Retail: R5.2k, Warranty",
+      "changes": {
+        "name": "Blackview MP60 [Celeron N5095, 8GB, 256GB SSD] Retail: R5.2k",
+        "model": "MP60"
+      },
+      "previous": {
+        "name": "Blackview MP60 [Celeron N5095, 8GB, 256GB SSD] Retail: R5.2k, Warranty",
+        "model": null
+      }
+    },
+    {
+      "stockNumber": "LAP1397",
+      "name": "Dell Optiplex 3280 All-in-One [i5-10500T | 8GB | 256GB SSD] Warranty",
+      "changes": {
+        "name": "Dell Optiplex 3280 All-in-One [i5-10500T | 8GB | 256GB SSD]",
+        "model": "Optiplex 3280 All-in-One"
+      },
+      "previous": {
+        "name": "Dell Optiplex 3280 All-in-One [i5-10500T | 8GB | 256GB SSD] Warranty",
+        "model": null
+      }
+    },
+    {
+      "stockNumber": "LAP1530",
+      "name": "Sony WF-1000XM5 Noise Cancelling Wireless Earphones - Up to 24 hours battery life - New/Sealed",
+      "changes": {
+        "name": "Sony WF-1000XM5 Noise Cancelling Wireless Earphones - Up to 24 hours battery life",
+        "model": "WF-1000XM5",
+        "warranty": "12-month warranty",
+        "category": "Accessories & Components"
+      },
+      "previous": {
+        "name": "Sony WF-1000XM5 Noise Cancelling Wireless Earphones - Up to 24 hours battery life - New/Sealed",
+        "model": null,
+        "warranty": null,
+        "category": "Accessories &amp; Components"
+      }
+    },
+    {
+      "stockNumber": "LAP1564",
+      "name": "MSI Stealth GS66 12UH Gaming [i9-12900H | 16GB | 1TB SSD | RTX 3080 16GB] Excellent Condition, Warranty",
+      "changes": {
+        "name": "MSI Stealth GS66 12UH Gaming [i9-12900H | 16GB | 1TB SSD | RTX 3080 16GB]"
+      },
+      "previous": {
+        "name": "MSI Stealth GS66 12UH Gaming [i9-12900H | 16GB | 1TB SSD | RTX 3080 16GB] Excellent Condition, Warranty"
+      }
+    },
+    {
+      "stockNumber": "LAP1625",
+      "name": "HP Omen 17 Gaming [i7-13700HX | 32GB | 1TB SSD | RTX 4070 8GB] Excellent Condition, Warranty",
+      "changes": {
+        "name": "HP Omen 17 Gaming [i7-13700HX | 32GB | 1TB SSD | RTX 4070 8GB]",
+        "model": "Omen 17",
+        "gpu": "NVIDIA GeForce RTX 4070 8GB GDDR6 Graphics"
+      },
+      "previous": {
+        "name": "HP Omen 17 Gaming [i7-13700HX | 32GB | 1TB SSD | RTX 4070 8GB] Excellent Condition, Warranty",
+        "model": null,
+        "gpu": null
+      }
+    },
+    {
+      "stockNumber": "LAP1632",
+      "name": "Dell 13 Pro Premium PA13250 [Ultra 5 238V | 32GB | QHD+ Touch] As NEW - 3 Year Warranty",
+      "changes": {
+        "name": "Dell 13 Pro Premium PA13250 [Ultra 5 238V | 32GB | QHD+ Touch]",
+        "model": "Pro Premium PA13250"
+      },
+      "previous": {
+        "name": "Dell 13 Pro Premium PA13250 [Ultra 5 238V | 32GB | QHD+ Touch] As NEW - 3 Year Warranty",
+        "model": null
+      }
+    },
+    {
+      "stockNumber": "LAP1633",
+      "name": "Dell Latitude 5440 [i5-1345U | 32GB | 512GB SSD] Excellent Condition, Warranty",
+      "changes": {
+        "name": "Dell Latitude 5440 [i5-1345U | 32GB | 512GB SSD]",
+        "model": "Latitude 5440"
+      },
+      "previous": {
+        "name": "Dell Latitude 5440 [i5-1345U | 32GB | 512GB SSD] Excellent Condition, Warranty",
+        "model": null
+      }
+    },
+    {
+      "stockNumber": "LAP1634",
+      "name": "Dell Latitude 5450 [Ultra 5 135U | 16GB | 512GB SSD] Excellent Condition, Warranty",
+      "changes": {
+        "name": "Dell Latitude 5450 [Ultra 5 135U | 16GB | 512GB SSD]",
+        "model": "Latitude 5450"
+      },
+      "previous": {
+        "name": "Dell Latitude 5450 [Ultra 5 135U | 16GB | 512GB SSD] Excellent Condition, Warranty",
+        "model": null
+      }
+    },
+    {
+      "stockNumber": "LAP1646",
+      "name": "Dell Precision 3590 [Ultra 7 155H | 16GB | 512GB SSD | RTX 500 Ada 4GB] Excellent, Warranty",
+      "changes": {
+        "name": "Dell Precision 3590 [Ultra 7 155H | 16GB | 512GB SSD | RTX 500 Ada 4GB]",
+        "model": "Precision 3590"
+      },
+      "previous": {
+        "name": "Dell Precision 3590 [Ultra 7 155H | 16GB | 512GB SSD | RTX 500 Ada 4GB] Excellent, Warranty",
+        "model": null
+      }
+    },
+    {
+      "stockNumber": "LAP1647",
+      "name": "Dell Pro 14 PC14255 [Ryzen 5 220 | 16GB | 512GB SSD] New, Warranty",
+      "changes": {
+        "name": "Dell Pro 14 PC14255 [Ryzen 5 220 | 16GB | 512GB SSD]",
+        "model": "Pro 14 PC14255"
+      },
+      "previous": {
+        "name": "Dell Pro 14 PC14255 [Ryzen 5 220 | 16GB | 512GB SSD] New, Warranty",
+        "model": null
+      }
+    },
+    {
+      "stockNumber": "LAP1657",
+      "name": "Alienware 15 R3 [i7-7700HQ | 16GB | 512GB | GTX 1070 8GB] Excellent Condition, Warranty",
+      "changes": {
+        "name": "Alienware 15 R3 [i7-7700HQ | 16GB | 512GB | GTX 1070 8GB]",
+        "model": "Alienware 15 R3"
+      },
+      "previous": {
+        "name": "Alienware 15 R3 [i7-7700HQ | 16GB | 512GB | GTX 1070 8GB] Excellent Condition, Warranty",
+        "model": null
+      }
+    },
+    {
+      "stockNumber": "LAP1672",
+      "name": "Dell Latitude 3440 [i7-1335U | 16GB | 512GB SSD] Excellent Condition, Warranty",
+      "changes": {
+        "name": "Dell Latitude 3440 [i7-1335U | 16GB | 512GB SSD]",
+        "model": "Latitude 3440"
+      },
+      "previous": {
+        "name": "Dell Latitude 3440 [i7-1335U | 16GB | 512GB SSD] Excellent Condition, Warranty",
+        "model": null
+      }
+    },
+    {
+      "stockNumber": "LAP1674",
+      "name": "Lenovo L15 Gen 4 [i7-1365U | 16GB | 1TB SSD] Excellent Condition, Warranty",
+      "changes": {
+        "name": "Lenovo L15 Gen 4 [i7-1365U | 16GB | 1TB SSD]",
+        "brand": "Lenovo",
+        "model": "ThinkPad L15 Gen 4",
+        "hasNumpad": true
+      },
+      "previous": {
+        "name": "Lenovo L15 Gen 4 [i7-1365U | 16GB | 1TB SSD] Excellent Condition, Warranty",
+        "brand": "Dell",
+        "model": null,
+        "hasNumpad": null
+      }
+    },
+    {
+      "stockNumber": "LAP1699",
+      "name": "Lenovo V530-15ICR Tower Desktop PC [i5-9500T | 8GB | 110GB SSD] Excellent Condition, Warranty",
+      "changes": {
+        "name": "Lenovo V530-15ICR Tower Desktop PC [i5-9500T | 8GB | 110GB SSD]",
+        "model": "V530-15ICR"
+      },
+      "previous": {
+        "name": "Lenovo V530-15ICR Tower Desktop PC [i5-9500T | 8GB | 110GB SSD] Excellent Condition, Warranty",
+        "model": null
+      }
+    },
+    {
+      "stockNumber": "LAP1720",
+      "name": "HP EliteBook 6 G1i 13 AI PC [Ultra 7 255U | 32GB | 1TB SSD] Demo, As New, 4 YEAR WARRANTY",
+      "changes": {
+        "name": "HP EliteBook 6 G1i 13 AI PC [Ultra 7 255U | 32GB | 1TB SSD]",
+        "model": "EliteBook 6 G1i 13",
+        "warranty": "Warranty until 9th February 2031"
+      },
+      "previous": {
+        "name": "HP EliteBook 6 G1i 13 AI PC [Ultra 7 255U | 32GB | 1TB SSD] Demo, As New, 4 YEAR WARRANTY",
+        "model": null,
+        "warranty": null
+      }
+    },
+    {
+      "stockNumber": "LAP1721",
+      "name": "MacBook Pro 16 [M2 Pro | 16GB | 512GB SSD] Silver, Excellent Condition, Warranty",
+      "changes": {
+        "name": "MacBook Pro 16 [M2 Pro | 16GB | 512GB SSD] Silver",
+        "model": "MacBook Pro 16",
+        "ram": "16GB Unified Memory"
+      },
+      "previous": {
+        "name": "MacBook Pro 16 [M2 Pro | 16GB | 512GB SSD] Silver, Excellent Condition, Warranty",
+        "model": null,
+        "ram": null
+      }
+    },
+    {
+      "stockNumber": "LAP1739",
+      "name": "Dell Pro Max 16 Premium MA16250 [Ultra 7 255H | 16GB | 512GB SSD | UHD Touch] Demo, As New, Warranty",
+      "changes": {
+        "name": "Dell Pro Max 16 Premium MA16250 [Ultra 7 255H | 16GB | 512GB SSD | UHD Touch]"
+      },
+      "previous": {
+        "name": "Dell Pro Max 16 Premium MA16250 [Ultra 7 255H | 16GB | 512GB SSD | UHD Touch] Demo, As New, Warranty"
+      }
+    },
+    {
+      "stockNumber": "LAP1740",
+      "name": "Lenovo E14 Gen 5 [i7-1335U | 16GB | 512GB SSD | Dedicated Graphics] Excellent Condition, Warranty",
+      "changes": {
+        "name": "Lenovo E14 Gen 5 [i7-1335U | 16GB | 512GB SSD | Dedicated Graphics]",
+        "model": "ThinkPad E14 Gen 5"
+      },
+      "previous": {
+        "name": "Lenovo E14 Gen 5 [i7-1335U | 16GB | 512GB SSD | Dedicated Graphics] Excellent Condition, Warranty",
+        "model": null
+      }
+    },
+    {
+      "stockNumber": "LAP1758",
+      "name": "Dell Pro 14 Plus PB14250 AI PC [Ultra 5 235U | 16GB | 512GB SSD]",
+      "changes": {
+        "retailPrice": 29900
+      },
+      "previous": {
+        "retailPrice": null
+      }
+    },
+    {
+      "stockNumber": "LAP1767",
+      "name": "HP EliteBook 8 G1i 14 [Ultra 7 255H | 16GB | 512GB SSD] Demo, Immaculate Condition, Warranty",
+      "changes": {
+        "name": "HP EliteBook 8 G1i 14 [Ultra 7 255H | 16GB | 512GB SSD]",
+        "model": "EliteBook 8 G1i 14"
+      },
+      "previous": {
+        "name": "HP EliteBook 8 G1i 14 [Ultra 7 255H | 16GB | 512GB SSD] Demo, Immaculate Condition, Warranty",
+        "model": null
+      }
+    },
+    {
+      "stockNumber": "LAP1780",
+      "name": "Dell Precision 3580 [i7-1360P | 16GB | 1TB SSD | RTX A500 4GB] Immaculate Condition, Warranty",
+      "changes": {
+        "name": "Dell Precision 3580 [i7-1360P | 16GB | 1TB SSD | RTX A500 4GB]",
+        "model": "Precision 3580",
+        "gpu": "RTX A500 4GB",
+        "screenSize": 15.6,
+        "screen": "15.6-inch display"
+      },
+      "previous": {
+        "name": "Dell Precision 3580 [i7-1360P | 16GB | 1TB SSD | RTX A500 4GB] Immaculate Condition, Warranty",
+        "model": null,
+        "gpu": null,
+        "screenSize": null,
+        "screen": null
+      }
+    },
+    {
+      "stockNumber": "LAP1784",
+      "name": "Dell Latitude 5540 [i7-1365U | 16GB | 256GB SSD] Excellent Condition, Warranty",
+      "changes": {
+        "name": "Dell Latitude 5540 [i7-1365U | 16GB | 256GB SSD]",
+        "model": "Latitude 5540"
+      },
+      "previous": {
+        "name": "Dell Latitude 5540 [i7-1365U | 16GB | 256GB SSD] Excellent Condition, Warranty",
+        "model": null
+      }
+    },
+    {
+      "stockNumber": "LAP1786",
+      "name": "Dell Latitude 5530 [i7-1255U | 16GB | 512GB SSD] Excellent Condition, Warranty",
+      "changes": {
+        "name": "Dell Latitude 5530 [i7-1255U | 16GB | 512GB SSD]",
+        "model": "Latitude 5530"
+      },
+      "previous": {
+        "name": "Dell Latitude 5530 [i7-1255U | 16GB | 512GB SSD] Excellent Condition, Warranty",
+        "model": null
+      }
+    },
+    {
+      "stockNumber": "LAP1788",
+      "name": "Dell Pro Max 16 MC16250 [Ultra 7 265H | 32GB | 512GB SSD | RTX PRO 500 6GB] Immaculate, Warranty",
+      "changes": {
+        "name": "Dell Pro Max 16 MC16250 [Ultra 7 265H | 32GB | 512GB SSD | RTX PRO 500 6GB]",
+        "model": "Pro Max 16 MC16250",
+        "gpu": "RTX PRO 500 6GB"
+      },
+      "previous": {
+        "name": "Dell Pro Max 16 MC16250 [Ultra 7 265H | 32GB | 512GB SSD | RTX PRO 500 6GB] Immaculate, Warranty",
+        "model": null,
+        "gpu": null
+      }
+    },
+    {
+      "stockNumber": "LAP1790",
+      "name": "Dell XPS 15 9510 [i7-11800H | 48GB | 1TB SSD | RTX 3050 Ti 4GB] Excellent Condition, Warranty",
+      "changes": {
+        "name": "Dell XPS 15 9510 [i7-11800H | 48GB | 1TB SSD | RTX 3050 Ti 4GB]",
+        "retailPrice": 49000
+      },
+      "previous": {
+        "name": "Dell XPS 15 9510 [i7-11800H | 48GB | 1TB SSD | RTX 3050 Ti 4GB] Excellent Condition, Warranty",
+        "retailPrice": null
+      }
+    },
+    {
+      "stockNumber": "LAP1792",
+      "name": "Corsair HX Series 80 Plus Platinum Certified HX1200 1200W PSU - Excellent Condition, Warranty",
+      "changes": {
+        "name": "Corsair HX Series 80 Plus Platinum Certified HX1200 1200W PSU",
+        "category": "Accessories & Components"
+      },
+      "previous": {
+        "name": "Corsair HX Series 80 Plus Platinum Certified HX1200 1200W PSU - Excellent Condition, Warranty",
+        "category": "Accessories &amp; Components"
+      }
+    },
+    {
+      "stockNumber": "LAP1802",
+      "name": "Thermaltake Toughpower GF 850W PSU (20+4) pin ATX - Black Excellent Condition, Warranty",
+      "changes": {
+        "name": "Thermaltake Toughpower GF 850W PSU (20+4) pin ATX - Black",
+        "category": "Accessories & Components"
+      },
+      "previous": {
+        "name": "Thermaltake Toughpower GF 850W PSU (20+4) pin ATX - Black Excellent Condition, Warranty",
+        "category": "Accessories &amp; Components"
+      }
+    },
+    {
+      "stockNumber": "LAP1807",
+      "name": "Corsair HX1200i 1200W Platinum ATX Fully Modular PSU - Excellent Condition, Warranty",
+      "changes": {
+        "name": "Corsair HX1200i 1200W Platinum ATX Fully Modular PSU",
+        "category": "Accessories & Components"
+      },
+      "previous": {
+        "name": "Corsair HX1200i 1200W Platinum ATX Fully Modular PSU - Excellent Condition, Warranty",
+        "category": "Accessories &amp; Components"
+      }
+    },
+    {
+      "stockNumber": "LAP1812",
+      "name": "Lenovo L14 Gen 5 [Ultra 5 125U | 16GB | 1TB SSD]",
+      "changes": {
+        "model": "ThinkPad L14 Gen 5",
+        "storage": "1TB SSD",
+        "retailPrice": 24900
+      },
+      "previous": {
+        "model": null,
+        "storage": null,
+        "retailPrice": null
+      }
+    },
+    {
+      "stockNumber": "LAP1813",
+      "name": "Dell Pro 16 PC16250 [Ultra 7 265U | 16GB | 512GB SSD] Brand New, Warranty",
+      "changes": {
+        "name": "Dell Pro 16 PC16250 [Ultra 7 265U | 16GB | 512GB SSD]",
+        "model": "Pro 16 PC16250"
+      },
+      "previous": {
+        "name": "Dell Pro 16 PC16250 [Ultra 7 265U | 16GB | 512GB SSD] Brand New, Warranty",
+        "model": null
+      }
+    },
+    {
+      "stockNumber": "LAP1818",
+      "name": "Dell Latitude 5540 [i5-1335U | 12GB | 256GB SSD] Excellent Condition, Warranty",
+      "changes": {
+        "name": "Dell Latitude 5540 [i5-1335U | 12GB | 256GB SSD]",
+        "model": "Latitude 5540"
+      },
+      "previous": {
+        "name": "Dell Latitude 5540 [i5-1335U | 12GB | 256GB SSD] Excellent Condition, Warranty",
+        "model": null
+      }
+    },
+    {
+      "stockNumber": "LAP1822",
+      "name": "Dell Pro 14 PC14250 AI PC [Ultra 7 255U | 32GB | 256GB] Brand New, Warranty",
+      "changes": {
+        "name": "Dell Pro 14 PC14250 AI PC [Ultra 7 255U | 32GB | 256GB]",
+        "model": "Pro 14 PC14250"
+      },
+      "previous": {
+        "name": "Dell Pro 14 PC14250 AI PC [Ultra 7 255U | 32GB | 256GB] Brand New, Warranty",
+        "model": null
+      }
+    },
+    {
+      "stockNumber": "LAP1824",
+      "name": "Lenovo L16 Gen 2 [Ultra 7 255U | 16GB | 1TB SSD]",
+      "changes": {
+        "retailPrice": 37000
+      },
+      "previous": {
+        "retailPrice": null
+      }
+    },
+    {
+      "stockNumber": "LAP1825",
+      "name": "Lenovo E16 Gen 4 [Ultra 5 325 | 16GB | 512GB SSD]",
+      "changes": {
+        "retailPrice": 23700
+      },
+      "previous": {
+        "retailPrice": null
+      }
+    },
+    {
+      "stockNumber": "LAP1827",
+      "name": "Lenovo T14 Gen 6 [Ultra 5 235U | 32GB | 256GB SSD]",
+      "changes": {
+        "retailPrice": 32200
+      },
+      "previous": {
+        "retailPrice": null
+      }
+    },
+    {
+      "stockNumber": "LAP1848",
+      "name": "Dell Pro 14 PC14250 AI PC [Ultra 7 255U | 16GB | 512GB SSD]",
+      "changes": {
+        "model": "Pro 14 PC14250",
+        "retailPrice": 30000
+      },
+      "previous": {
+        "model": null,
+        "retailPrice": null
+      }
+    },
+    {
+      "stockNumber": "LAP1849",
+      "name": "Asus ProArt P16 [Ryzen AI 9 HX 370 | 32GB | 2TB SSD | RTX 4070 8GB | Touch]",
+      "changes": {
+        "model": "ProArt P16",
+        "gpu": "NVIDIA GeForce RTX 4070",
+        "retailPrice": 57900
+      },
+      "previous": {
+        "model": null,
+        "gpu": null,
+        "retailPrice": null
+      }
+    },
+    {
+      "stockNumber": "LAP839",
+      "name": "Conti 1000w Portable UPS - NEW - Retails for R13,500",
+      "changes": {
+        "name": "Conti 1000w Portable UPS",
+        "category": "Accessories & Components"
+      },
+      "previous": {
+        "name": "Conti 1000w Portable UPS - NEW - Retails for R13,500",
+        "category": "Accessories &amp; Components"
+      }
+    },
+    {
+      "stockNumber": "LAP940",
+      "name": "Ecoflow River Pro 720Wh 660W - Excellent Condition",
+      "changes": {
+        "name": "Ecoflow River Pro 720Wh 660W",
+        "category": "Accessories & Components"
+      },
+      "previous": {
+        "name": "Ecoflow River Pro 720Wh 660W - Excellent Condition",
+        "category": "Accessories &amp; Components"
+      }
+    },
+    {
+      "stockNumber": "MISC021",
+      "name": "VolkanoX Quantum Series GPS Smartwatch Ð Brand New, Sealed",
+      "changes": {
+        "name": "VolkanoX Quantum Series GPS Smartwatch Ð",
+        "category": "Accessories & Components"
+      },
+      "previous": {
+        "name": "VolkanoX Quantum Series GPS Smartwatch Ð Brand New, Sealed",
+        "category": "Accessories &amp; Components"
+      }
+    }
+  ]
+}
