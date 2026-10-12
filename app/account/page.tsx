@@ -12,7 +12,7 @@ export default async function AccountPage() {
   if (!customer) redirect('/login?next=%2Faccount')
 
   const orders = await prisma.order.findMany({
-    where: { customerId: customer.id },
+    where: { customer: { is: { id: customer.id } } },
     orderBy: { createdAt: 'desc' },
     include: { items: { orderBy: { id: 'asc' } } },
   })
