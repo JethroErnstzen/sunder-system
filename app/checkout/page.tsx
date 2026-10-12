@@ -17,6 +17,13 @@ type CartItem = {
   imageUrl?: string | null
 }
 
+type OrderConfirmation = {
+  orderNumber: string
+  total: number
+  paymentMethod: string
+  email: string
+}
+
 const money = (value: number) => `R ${value.toLocaleString('en-ZA')}`
 
 function isEligibleOfficeDevice(item: CartItem) {
@@ -34,7 +41,9 @@ function isEligibleOfficeDevice(item: CartItem) {
 
 export default function CheckoutPage() {
   const [items, setItems] = useState<CartItem[]>([])
-  const [submitted, setSubmitted] = useState(false)
+  const [submitted, setSubmitted] = useState<OrderConfirmation | null>(null)
+  const [submitError, setSubmitError] = useState('')
+  const [submitting, setSubmitting] = useState(false)
   const [customerType, setCustomerType] = useState<'private' | 'company'>('private')
   const [sameAsBilling, setSameAsBilling] = useState(true)
   const [officeAdded, setOfficeAdded] = useState(false)
@@ -57,11 +66,65 @@ export default function CheckoutPage() {
   )
   const total = subtotal + (officeAdded && hasLaptop ? officePrice : 0)
 
-  function submit(event: FormEvent<HTMLFormElement>) {
+  async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    // Payment gateway credentials/API endpoints are intentionally not wired here yet.
-    // The selected method is ready to be routed once the merchant credentials are added.
-    setSubmitted(true)
+    const form = new FormData(event.currentTarget)
+    const value = (name: string) => String(form.get(name) || '').trim()
+    const billingAddress = customerType === 'company' ? value('companyAddress') : value('billingAddress')
+    const billingSuburb = customerType === 'company' ? value('companySuburb') : value('billingSuburb')
+    const billingCity = customerType === 'company' ? value('companyCity') : value('billingCity')
+    const billingProvince = customerType === 'company' ? value('companyProvince') : value('billingProvince')
+    const billingPostalCode = customerType === 'company' ? value('companyPostalCode') : value('billingPostalCode')
+    const sameAddress = sameAsBilling
+
+    setSubmitError('')
+    setSubmitting(true)
+    try {
+      const response = await fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items: items.map(({ stockNumber, quantity }) => ({ stockNumber, quantity })),
+          officeAddon: officeAdded,
+          paymentMethod,
+          customerType,
+          email: value('email'),
+          phone: value('mobile'),
+          firstName: value('firstName'),
+          lastName: value('lastName'),
+          companyName: value('companyName'),
+          vatNumber: value('vatNumber'),
+          registrationNumber: value('registrationNumber'),
+          billingAddress,
+          billingSuburb,
+          billingCity,
+          billingProvince,
+          billingPostalCode,
+          shippingAddress: sameAddress ? billingAddress : value('deliveryAddress'),
+          shippingSuburb: sameAddress ? billingSuburb : value('deliverySuburb'),
+          shippingCity: sameAddress ? billingCity : value('deliveryCity'),
+          shippingProvince: sameAddress ? billingProvince : value('deliveryProvince'),
+          shippingPostalCode: sameAddress ? billingPostalCode : value('deliveryPostalCode'),
+        }),
+      })
+      const result = await response.json()
+      if (!response.ok) {
+        setSubmitError(result.error || 'Unable to place your order. Please review your details and try again.')
+        return
+      }
+      setSubmitted({
+        orderNumber: result.orderNumber,
+        total: result.total,
+        paymentMethod,
+        email: value('email'),
+      })
+      localStorage.removeItem('sunder-cart')
+      window.dispatchEvent(new Event('sunder-cart-updated'))
+    } catch {
+      setSubmitError('Unable to place your order right now. Please try again.')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   if (submitted) {
@@ -70,8 +133,10 @@ export default function CheckoutPage() {
         <div className={styles.shell}>
           <section className={styles.success}>
             <div className={styles.successIcon}>✓</div>
-            <h1>Order details received</h1>
-            <p>Your order request has been captured. Payment integration can be connected next.</p>
+            <h1>Order request received</h1>
+            <p>Order <strong>{submitted.orderNumber}</strong> has been saved for {money(submitted.total)}. It will appear in your account after you sign in with {submitted.email}.</p>
+            <p>Your order is awaiting payment. Online payment is not connected yet, so no payment has been processed. Sunder Computers will contact you to arrange payment and confirm your order.</p>
+            <Link href={`/register?email=${encodeURIComponent(submitted.email)}`} className={styles.primaryButton}>Set up your account to view orders</Link>
             <Link href="/shop" className={styles.primaryButton}>Back to Shop</Link>
           </section>
         </div>
@@ -305,12 +370,14 @@ export default function CheckoutPage() {
 
             <div className={styles.paymentMethods}>
               <div className={styles.paymentHeading}>Payment Method</div>
+              <p role="note">Online payment is not connected yet. Placing this order request does not charge you; Sunder Computers will contact you to arrange payment.</p>
               <label className={`${styles.paymentOption} ${paymentMethod === 'stitch' ? styles.paymentSelected : ''}`}><input type="radio" name="paymentMethod" value="stitch" checked={paymentMethod === 'stitch'} onChange={() => setPaymentMethod('stitch')} /><span className={styles.paymentOptionCopy}><strong>Stitch Express</strong><span>Apple Pay · Google Pay · Capitec Pay · Card · BNPL</span><small>Secure payments powered by Stitch Express</small></span><img src="https://www.sunder.co.za/wp-content/plugins/stitch-express/assets/wc-logo-v2.svg" alt="" className={styles.paymentLogo} /></label>
               <label className={`${styles.paymentOption} ${paymentMethod === 'payflex' ? styles.paymentSelected : ''}`}><input type="radio" name="paymentMethod" value="payflex" checked={paymentMethod === 'payflex'} onChange={() => setPaymentMethod('payflex')} /><span className={styles.paymentOptionCopy}><strong>Payflex</strong><span>Pay over time with Payflex</span></span><img src="https://www.sunder.co.za/wp-content/plugins/payflex-payment-gateway/Checkout.png" alt="" className={styles.payflexLogo} /></label>
               <label className={`${styles.paymentOption} ${paymentMethod === 'stitchPayLater' ? styles.paymentSelected : ''}`}><input type="radio" name="paymentMethod" value="stitchPayLater" checked={paymentMethod === 'stitchPayLater'} onChange={() => setPaymentMethod('stitchPayLater')} /><span className={styles.paymentOptionCopy}><strong>Stitch Pay Later</strong><span>Choose Stitch Pay Later at payment</span></span><img src="https://www.sunder.co.za/wp-content/plugins/stitch-express/assets/blocks/stitch.svg" alt="" className={styles.paymentLogo} /></label>
               <label className={`${styles.paymentOption} ${paymentMethod === 'eft' ? styles.paymentSelected : ''}`}><input type="radio" name="paymentMethod" value="eft" checked={paymentMethod === 'eft'} onChange={() => setPaymentMethod('eft')} /><span className={styles.paymentOptionCopy}><strong>EFT / Bank Transfer</strong><span>Pay directly into our FNB account</span></span></label>
-              <button type="submit" className={styles.summaryPaymentButton}>Proceed to Payment</button>
               {paymentMethod === 'eft' && <div className={styles.eftDetails}><div className={styles.eftTitle}>EFT payment details</div><div className={styles.eftGrid}><div><span>Bank</span><strong>FNB</strong></div><div><span>Account Name</span><strong>Sunder Computers</strong></div><div><span>Account Number</span><strong>630 384 69713</strong></div><div><span>Branch Code</span><strong>220323</strong></div></div></div>}
+              {submitError && <p role="alert">{submitError}</p>}
+              <button type="submit" className={styles.summaryPaymentButton} disabled={submitting}>{submitting ? 'Saving order…' : 'Place order request'}</button>
             </div>
 
             <div className={styles.benefits}>

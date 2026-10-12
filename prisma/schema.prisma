@@ -69,6 +69,7 @@ model RetailListing {
 
 model Order {
   id                   String               @id @default(cuid())
+  customerId           String?
   orderNumber          String               @unique
   status               String               @default("pending")
   paymentStatus        String               @default("pending")
@@ -98,8 +99,36 @@ model Order {
   officeAddon          Boolean            @default(false)
   createdAt            DateTime           @default(now())
   updatedAt            DateTime           @updatedAt
+  customer             Customer?            @relation(fields: [customerId], references: [id], onDelete: SetNull)
   items                OrderItem[]
   payments             PaymentTransaction[]
+
+  @@index([customerId, createdAt])
+}
+
+model Customer {
+  id             String                @id @default(cuid())
+  email          String                @unique
+  fullName       String?
+  phone          String?
+  passwordHash   String?
+  sessionVersion Int                   @default(0)
+  source         String                @default("website")
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+  orders         Order[]
+  resetTokens    CustomerResetToken[]
+}
+
+model CustomerResetToken {
+  id         String   @id @default(cuid())
+  customerId String
+  tokenHash  String   @unique
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId, createdAt])
 }
 
 model OrderItem {

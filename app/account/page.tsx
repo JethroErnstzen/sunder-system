@@ -1,2 +1,68 @@
-import Link from 'next/link';
-export default function Account(){return <main className="simple-page account-page"><Link href="/">← Back to Sunder</Link><h1>My Account</h1><p>Your account dashboard will contain orders, saved details and future account features.</p><Link href="/login">Sign in</Link></main>}
+import Link from 'next/link'
+import { redirect } from 'next/navigation'
+import { getCurrentCustomer } from '@/lib/customer-auth'
+import { prisma } from '@/lib/prisma'
+import SignOutButton from '@/app/components/SignOutButton'
+import styles from './account.module.css'
+
+const money = (amount: number) => `R ${amount.toLocaleString('en-ZA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+
+export default async function AccountPage() {
+  const customer = await getCurrentCustomer()
+  if (!customer) redirect('/login?next=%2Faccount')
+
+  const orders = await prisma.order.findMany({
+    where: { customerId: customer.id },
+    orderBy: { createdAt: 'desc' },
+    include: { items: { orderBy: { id: 'asc' } } },
+  })
+
+  return (
+    <main className={styles.page}>
+      <div className={styles.shell}>
+        <header className={styles.header}>
+          <div>
+            <Link href="/" className={styles.back}>← Back to Sunder</Link>
+            <span className={styles.eyebrow}>SUNDER COMPUTERS</span>
+            <h1>My account</h1>
+            <p>{customer.fullName ? `Welcome, ${customer.fullName}.` : customer.email}</p>
+          </div>
+          <SignOutButton />
+        </header>
+
+        <section className={styles.orders}>
+          <div className={styles.ordersHeading}>
+            <div><span className={styles.eyebrow}>YOUR PURCHASES</span><h2>Order history</h2></div>
+            <span>{orders.length} {orders.length === 1 ? 'order' : 'orders'}</span>
+          </div>
+          {orders.length === 0 ? (
+            <div className={styles.empty}>
+              <h3>No orders yet</h3>
+              <p>Orders placed with this email on the new Sunder website will appear here. Purchases from the previous website are not included in this order history.</p>
+              <Link href="/shop">Browse products</Link>
+            </div>
+          ) : (
+            <div className={styles.orderList}>
+              {orders.map((order) => (
+                <article className={styles.order} key={order.id}>
+                  <div className={styles.orderHeading}>
+                    <div><span>Order</span><strong>{order.orderNumber}</strong></div>
+                    <div><span>{order.createdAt.toLocaleDateString('en-ZA')}</span><strong>{money(order.total)}</strong></div>
+                  </div>
+                  <div className={styles.orderStatus}>
+                    <span>Order: {order.status.replaceAll('_', ' ')}</span>
+                    <span>Payment: {order.paymentStatus.replaceAll('_', ' ')}</span>
+                    {order.paymentMethod && <span>Method: {order.paymentMethod === 'stitchPayLater' ? 'Stitch Pay Later' : order.paymentMethod}</span>}
+                  </div>
+                  <ul>
+                    {order.items.map((item) => <li key={item.id}>{item.name} <span>× {item.quantity} · {money(item.lineTotal)}</span></li>)}
+                  </ul>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
+      </div>
+    </main>
+  )
+}

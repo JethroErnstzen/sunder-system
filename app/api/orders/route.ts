@@ -27,6 +27,12 @@ export async function POST(request: Request) {
     const items = Array.isArray(body.items) ? body.items : []
     if (!items.length) return NextResponse.json({ error: 'Cart is empty.' }, { status: 400 })
     if (!body.email) return NextResponse.json({ error: 'Email is required.' }, { status: 400 })
+    const email = String(body.email).trim().toLowerCase()
+    if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return NextResponse.json({ error: 'Enter a valid email address.' }, { status: 400 })
+    }
+    const paymentMethods = ['stitch', 'eft', 'payflex', 'stitchPayLater']
+    const paymentMethod = paymentMethods.includes(body.paymentMethod) ? String(body.paymentMethod) : null
 
     const stockNumbers = items.map((item: any) => String(item.stockNumber)).filter(Boolean)
     const products = await prisma.product.findMany({
@@ -66,12 +72,35 @@ export async function POST(request: Request) {
     const officeAddon = Boolean(body.officeAddon) && hasLaptop
     const total = subtotal + (officeAddon ? OFFICE_PRICE : 0)
     const tax = total - total / 1.15
+    if (officeAddon) {
+      orderItems.push({
+        stockNumber: 'OFFICE-2021',
+        name: 'Microsoft Office Professional Plus 2021',
+        condition: 'New',
+        quantity: 1,
+        unitPrice: OFFICE_PRICE,
+        lineTotal: OFFICE_PRICE,
+        imageUrl: '/microsoft-office-2021.png',
+      })
+    }
+
+    const customer = await prisma.customer.upsert({
+      where: { email },
+      update: {},
+      create: {
+        email,
+        fullName: [body.firstName, body.lastName].filter(Boolean).map(String).join(' ').trim() || null,
+        phone: body.phone ? String(body.phone).trim() : null,
+      },
+    })
 
     const order = await prisma.order.create({
       data: {
         orderNumber: makeOrderNumber(),
+        customerId: customer.id,
+        paymentMethod,
         customerType: body.customerType === 'company' ? 'company' : 'private',
-        email: String(body.email).trim(),
+        email,
         phone: body.phone || null,
         firstName: body.firstName || null,
         lastName: body.lastName || null,
@@ -96,21 +125,6 @@ export async function POST(request: Request) {
         items: { create: orderItems },
       },
     })
-
-    if (officeAddon) {
-      await prisma.orderItem.create({
-        data: {
-          orderId: order.id,
-          stockNumber: 'OFFICE-2021',
-          name: 'Microsoft Office Professional Plus 2021',
-          condition: 'New',
-          quantity: 1,
-          unitPrice: OFFICE_PRICE,
-          lineTotal: OFFICE_PRICE,
-          imageUrl: '/microsoft-office-2021.png',
-        },
-      })
-    }
 
     return NextResponse.json({ orderId: order.id, orderNumber: order.orderNumber, total: order.total })
   } catch (error) {
