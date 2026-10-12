@@ -153,8 +153,12 @@ model PaymentTransaction {
   status       String   @default("pending")
   externalId   String?
   externalRef  String?
+  checkoutUrl  String?
   rawResponse  String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   order        Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, externalRef])
+  @@index([orderId, provider, createdAt])
 }

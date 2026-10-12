@@ -4,9 +4,41 @@ The new Sunder site is a custom Next.js application. WooCommerce and Elementor a
 
 ## Payment architecture
 
-- Stitch: server-side integration. Client secret must never be exposed to the browser. Payment status will be reconciled from Stitch webhooks.
+- Stitch Express: server-side hosted-checkout integration. The application creates the order from server-verified prices, creates the Stitch payment request, and redirects to Stitch. Only signed Svix webhook events update the payment status; redirect query parameters are never treated as proof of payment.
 - Payflex: server-side API integration. Payment status will be reconciled from Payflex callbacks/status APIs.
 - EFT: local order method; order remains Awaiting EFT Payment until verified.
+
+### Stitch Express setup
+
+Stitch checkout is disabled unless `STITCH_ENABLED=true`, client credentials and a webhook signing secret are configured, and `STITCH_ENV` is explicitly set to `test` or `live`. Small live payments are supported; they are real charges and may incur fees.
+
+The variables below go in the **staging server's environment settings / secret manager** (not in this tracked guide and not in `.env.example`). Fill in the three blank values directly in that secure settings page:
+
+```dotenv
+APP_BASE_URL="https://staging.sunder.co.za"
+STITCH_ENABLED="true"
+STITCH_ENV="live"
+STITCH_CLIENT_ID=""
+STITCH_CLIENT_SECRET=""
+STITCH_WEBHOOK_SECRET=""
+```
+
+- `STITCH_CLIENT_ID` and `STITCH_CLIENT_SECRET`: from the Stitch **Live** client Developer settings.
+- `STITCH_WEBHOOK_SECRET`: signing secret for the endpoint you created in Stitch.
+- Keep all three secret values out of chat, screenshots, source control, and this documentation file.
+
+Configure these URLs in Stitch:
+
+- **Redirect URL** (Developer settings): `https://staging.sunder.co.za/checkout/payment-result`
+- **Webhook endpoint** (Webhooks → Endpoints), subscribed to `payment.paid` and `payment.settled`: `https://staging.sunder.co.za/api/payments/stitch/webhook`
+
+The client needs the `client_paymentrequest` scope and the Stitch Express payment methods you intend to offer must be enabled for the client. Live payments are real charges and may incur fees.
+
+Before setting `STITCH_ENABLED=true`, deploy the payment changes and apply the additive Prisma schema update on staging. Then start with a small real order, and confirm the order is marked paid in its account history and webhook delivery succeeds in Stitch.
+
+The webhook handler validates Stitch's signed raw payload, matches payment events to the stored Stitch payment/request ID or link ID, and checks the amount against the order before updating its payment status. `payment.paid` and `payment.settled` are both treated as paid confirmations.
+
+The `PaymentTransaction` schema change is additive. Back up the deployment database and run `npx prisma db push` from the deployed application directory before enabling checkout.
 
 ## Sales channels
 

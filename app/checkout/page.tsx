@@ -18,10 +18,12 @@ type CartItem = {
 }
 
 type OrderConfirmation = {
+  orderId: string
   orderNumber: string
   total: number
   paymentMethod: string
   email: string
+  paymentError?: string
 }
 
 const money = (value: number) => `R ${value.toLocaleString('en-ZA')}`
@@ -44,10 +46,15 @@ export default function CheckoutPage() {
   const [submitted, setSubmitted] = useState<OrderConfirmation | null>(null)
   const [submitError, setSubmitError] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [retryingPayment, setRetryingPayment] = useState(false)
+  const [retryPaymentError, setRetryPaymentError] = useState('')
   const [customerType, setCustomerType] = useState<'private' | 'company'>('private')
   const [sameAsBilling, setSameAsBilling] = useState(true)
   const [officeAdded, setOfficeAdded] = useState(false)
-  const [paymentMethod, setPaymentMethod] = useState<'stitch' | 'eft' | 'payflex' | 'stitchPayLater'>('stitch')
+  const [paymentMethod, setPaymentMethod] = useState<'stitch' | 'eft' | 'payflex'>('eft')
+  const [stitchAvailable, setStitchAvailable] = useState(false)
+  const [stitchStatusLoading, setStitchStatusLoading] = useState(true)
+  const [stitchStatusMessage, setStitchStatusMessage] = useState('')
 
   useEffect(() => {
     try {
@@ -56,6 +63,23 @@ export default function CheckoutPage() {
     } catch {
       setItems([])
     }
+
+    fetch('/api/integrations/status')
+      .then(async (response) => {
+        if (!response.ok) throw new Error('Unable to check Stitch availability.')
+        const status: { stitch?: { configured?: boolean } } = await response.json()
+        const available = status.stitch?.configured === true
+        setStitchAvailable(available)
+        setPaymentMethod(available ? 'stitch' : 'eft')
+        if (!available) {
+          setStitchStatusMessage('Stitch Express is not configured yet. Please choose EFT.')
+        }
+      })
+      .catch(() => {
+        setPaymentMethod('eft')
+        setStitchStatusMessage('Stitch Express availability could not be checked. Please choose EFT.')
+      })
+      .finally(() => setStitchStatusLoading(false))
   }, [])
 
   const hasLaptop = useMemo(() => items.some(isEligibleOfficeDevice), [items])
@@ -68,6 +92,10 @@ export default function CheckoutPage() {
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    if (paymentMethod === 'stitch' && !stitchAvailable) {
+      setSubmitError(stitchStatusMessage || 'Stitch Express is not currently available.')
+      return
+    }
     const form = new FormData(event.currentTarget)
     const value = (name: string) => String(form.get(name) || '').trim()
     const billingAddress = customerType === 'company' ? value('companyAddress') : value('billingAddress')
@@ -112,14 +140,40 @@ export default function CheckoutPage() {
         setSubmitError(result.error || 'Unable to place your order. Please review your details and try again.')
         return
       }
-      setSubmitted({
+      const confirmation: OrderConfirmation = {
+        orderId: result.orderId,
         orderNumber: result.orderNumber,
         total: result.total,
         paymentMethod,
         email: value('email'),
-      })
+      }
+      setSubmitted(confirmation)
       localStorage.removeItem('sunder-cart')
       window.dispatchEvent(new Event('sunder-cart-updated'))
+
+      if (paymentMethod === 'stitch') {
+        try {
+          const paymentResponse = await fetch('/api/payments/stitch/checkout', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ orderId: result.orderId, email: value('email') }),
+          })
+          const paymentResult = await paymentResponse.json()
+          if (!paymentResponse.ok) {
+            setSubmitted({
+              ...confirmation,
+              paymentError: paymentResult.error || 'Stitch checkout could not be started.',
+            })
+            return
+          }
+          window.location.assign(paymentResult.paymentUrl)
+        } catch {
+          setSubmitted({
+            ...confirmation,
+            paymentError: 'The order was saved but Stitch checkout could not be reached. Please retry.',
+          })
+        }
+      }
     } catch {
       setSubmitError('Unable to place your order right now. Please try again.')
     } finally {
@@ -128,14 +182,54 @@ export default function CheckoutPage() {
   }
 
   if (submitted) {
+    const isStitch = submitted.paymentMethod === 'stitch'
     return (
       <main className={styles.page}>
         <div className={styles.shell}>
           <section className={styles.success}>
             <div className={styles.successIcon}>✓</div>
-            <h1>Order request received</h1>
+            <h1>{isStitch ? 'Order created' : 'Order request received'}</h1>
             <p>Order <strong>{submitted.orderNumber}</strong> has been saved for {money(submitted.total)}. It will appear in your account after you sign in with {submitted.email}.</p>
-            <p>Your order is awaiting payment. Online payment is not connected yet, so no payment has been processed. Sunder Computers will contact you to arrange payment and confirm your order.</p>
+            {submitted.paymentError ? (
+              <>
+                <p role="alert">Your order is saved, but Stitch checkout could not be started: {submitted.paymentError}</p>
+                {retryPaymentError && <p role="alert">{retryPaymentError}</p>}
+                <button
+                  type="button"
+                  className={styles.primaryButton}
+                  disabled={retryingPayment}
+                  onClick={async () => {
+                    setRetryingPayment(true)
+                    setRetryPaymentError('')
+                    try {
+                      const response = await fetch('/api/payments/stitch/checkout', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ orderId: submitted.orderId, email: submitted.email }),
+                      })
+                      const result = await response.json()
+                      if (!response.ok) {
+                        setRetryPaymentError(result.error || 'Stitch checkout could not be started.')
+                        return
+                      }
+                      window.location.assign(result.paymentUrl)
+                    } catch {
+                      setRetryPaymentError('Stitch checkout could not be started. Please try again.')
+                    } finally {
+                      setRetryingPayment(false)
+                    }
+                  }}
+                >
+                  {retryingPayment ? 'Starting secure checkout…' : 'Retry Stitch checkout'}
+                </button>
+              </>
+            ) : isStitch ? (
+              <p>Continue to Stitch’s secure payment page to complete your payment. Your order will update after Stitch confirms the result.</p>
+            ) : submitted.paymentMethod === 'eft' ? (
+              <p>Your order is awaiting EFT payment. The payment has not been verified automatically; Sunder Computers will confirm it before processing your order.</p>
+            ) : (
+              <p>Your order is saved as awaiting payment. This payment option is not connected yet, so no payment has been processed.</p>
+            )}
             <Link href={`/register?email=${encodeURIComponent(submitted.email)}`} className={styles.primaryButton}>Set up your account to view orders</Link>
             <Link href="/shop" className={styles.primaryButton}>Back to Shop</Link>
           </section>
@@ -370,14 +464,14 @@ export default function CheckoutPage() {
 
             <div className={styles.paymentMethods}>
               <div className={styles.paymentHeading}>Payment Method</div>
-              <p role="note">Online payment is not connected yet. Placing this order request does not charge you; Sunder Computers will contact you to arrange payment.</p>
-              <label className={`${styles.paymentOption} ${paymentMethod === 'stitch' ? styles.paymentSelected : ''}`}><input type="radio" name="paymentMethod" value="stitch" checked={paymentMethod === 'stitch'} onChange={() => setPaymentMethod('stitch')} /><span className={styles.paymentOptionCopy}><strong>Stitch Express</strong><span>Apple Pay · Google Pay · Capitec Pay · Card · BNPL</span><small>Secure payments powered by Stitch Express</small></span><img src="https://www.sunder.co.za/wp-content/plugins/stitch-express/assets/wc-logo-v2.svg" alt="" className={styles.paymentLogo} /></label>
+              <p role="note">{stitchStatusLoading ? 'Checking Stitch Express availability…' : paymentMethod === 'stitch' ? 'You will be redirected to Stitch Express to complete payment securely. Available payment methods depend on your Stitch account.' : 'This option does not process payment online yet; your order will be saved awaiting payment.'}</p>
+              <label className={`${styles.paymentOption} ${paymentMethod === 'stitch' ? styles.paymentSelected : ''}`}><input type="radio" name="paymentMethod" value="stitch" checked={paymentMethod === 'stitch'} disabled={!stitchAvailable || stitchStatusLoading} onChange={() => setPaymentMethod('stitch')} /><span className={styles.paymentOptionCopy}><strong>Stitch Express</strong><span>Apple Pay · Google Pay · Capitec Pay · Card · BNPL</span><small>Secure payments powered by Stitch Express</small></span><img src="https://www.sunder.co.za/wp-content/plugins/stitch-express/assets/wc-logo-v2.svg" alt="" className={styles.paymentLogo} /></label>
+              {stitchStatusMessage && <p role="status">{stitchStatusMessage}</p>}
               <label className={`${styles.paymentOption} ${paymentMethod === 'payflex' ? styles.paymentSelected : ''}`}><input type="radio" name="paymentMethod" value="payflex" checked={paymentMethod === 'payflex'} onChange={() => setPaymentMethod('payflex')} /><span className={styles.paymentOptionCopy}><strong>Payflex</strong><span>Pay over time with Payflex</span></span><img src="https://www.sunder.co.za/wp-content/plugins/payflex-payment-gateway/Checkout.png" alt="" className={styles.payflexLogo} /></label>
-              <label className={`${styles.paymentOption} ${paymentMethod === 'stitchPayLater' ? styles.paymentSelected : ''}`}><input type="radio" name="paymentMethod" value="stitchPayLater" checked={paymentMethod === 'stitchPayLater'} onChange={() => setPaymentMethod('stitchPayLater')} /><span className={styles.paymentOptionCopy}><strong>Stitch Pay Later</strong><span>Choose Stitch Pay Later at payment</span></span><img src="https://www.sunder.co.za/wp-content/plugins/stitch-express/assets/blocks/stitch.svg" alt="" className={styles.paymentLogo} /></label>
               <label className={`${styles.paymentOption} ${paymentMethod === 'eft' ? styles.paymentSelected : ''}`}><input type="radio" name="paymentMethod" value="eft" checked={paymentMethod === 'eft'} onChange={() => setPaymentMethod('eft')} /><span className={styles.paymentOptionCopy}><strong>EFT / Bank Transfer</strong><span>Pay directly into our FNB account</span></span></label>
               {paymentMethod === 'eft' && <div className={styles.eftDetails}><div className={styles.eftTitle}>EFT payment details</div><div className={styles.eftGrid}><div><span>Bank</span><strong>FNB</strong></div><div><span>Account Name</span><strong>Sunder Computers</strong></div><div><span>Account Number</span><strong>630 384 69713</strong></div><div><span>Branch Code</span><strong>220323</strong></div></div></div>}
               {submitError && <p role="alert">{submitError}</p>}
-              <button type="submit" className={styles.summaryPaymentButton} disabled={submitting}>{submitting ? 'Saving order…' : 'Place order request'}</button>
+              <button type="submit" className={styles.summaryPaymentButton} disabled={submitting || stitchStatusLoading}>{submitting ? 'Saving order…' : paymentMethod === 'stitch' ? 'Continue to Stitch Express' : 'Place order request'}</button>
             </div>
 
             <div className={styles.benefits}>
