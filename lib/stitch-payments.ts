@@ -29,8 +29,8 @@ export function isStitchConfigured() {
 }
 
 async function getClientToken() {
-  const clientId = process.env.STITCH_CLIENT_ID
-  const clientSecret = process.env.STITCH_CLIENT_SECRET
+  const clientId = process.env.STITCH_CLIENT_ID?.trim()
+  const clientSecret = process.env.STITCH_CLIENT_SECRET?.trim()
   if (!clientId || !clientSecret) {
     throw new StitchCheckoutError('STITCH_CREDENTIALS_MISSING', 'Stitch client credentials are missing on the staging server.')
   }
