@@ -59,7 +59,14 @@ async function getClientToken() {
     throw new StitchCheckoutError('STITCH_TOKEN_RESPONSE_INVALID', 'Stitch returned an unreadable authentication response.')
   }
   if (!response.ok || !isRecord(result) || typeof result.access_token !== 'string') {
-    throw new StitchCheckoutError('STITCH_TOKEN_REQUEST_FAILED', `Stitch authentication failed (HTTP ${response.status}). Check the Live client credentials and payment-request permissions.`)
+    const oauthError = typeof result === 'object' && result !== null && 'error' in result &&
+      typeof result.error === 'string' && /^[a-z][a-z0-9_]{0,63}$/.test(result.error)
+      ? `: ${result.error}`
+      : ''
+    throw new StitchCheckoutError(
+      'STITCH_TOKEN_REQUEST_FAILED',
+      `Stitch authentication failed (HTTP ${response.status}${oauthError}). Check the Live client credentials and payment-request permissions.`,
+    )
   }
   return result.access_token
 }
