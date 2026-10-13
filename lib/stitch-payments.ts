@@ -152,9 +152,9 @@ export async function createStitchPaymentRequest(
     currency: 'ZAR',
   })
 
-  console.error(
-  '[Stitch Express payment creation response]',
-  JSON.stringify(response),
+throw new StitchCheckoutError(
+  'STITCH_DIAGNOSTIC',
+  `Stitch response: ${JSON.stringify(response)}`,
 )
 
   const data = isRecord(response.data) ? response.data : null
