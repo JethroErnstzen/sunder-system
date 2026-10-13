@@ -34,12 +34,15 @@ async function getClientToken() {
   if (!clientId || !clientSecret) {
     throw new StitchCheckoutError('STITCH_CREDENTIALS_MISSING', 'Stitch client credentials are missing on the staging server.')
   }
-  const form = new URLSearchParams({
-    grant_type: 'client_credentials',
-    client_id: clientId,
-    client_secret: clientSecret,
-    scope: 'client_paymentrequest',
-  })
+
+const form = new URLSearchParams({
+  grant_type: 'client_credentials',
+  client_id: clientId,
+  client_secret: clientSecret,
+  scope: 'client_paymentrequest',
+  audience: 'https://secure.stitch.money/connect/token',
+})
+
   let response: Response
   try {
     response = await fetch(TOKEN_URL, {
