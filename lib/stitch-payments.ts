@@ -90,12 +90,30 @@ async function requestExpress(path: string, method: 'GET' | 'POST', body?: Recor
   } catch {
     throw new StitchCheckoutError('STITCH_API_RESPONSE_INVALID', 'Stitch Express returned an invalid API response.')
   }
-  if (!response.ok || !isRecord(payload)) {
-    throw new StitchCheckoutError('STITCH_API_REQUEST_FAILED', `Stitch Express rejected the request (HTTP ${response.status}).`)
-  }
-  if (payload.success === false) {
-    throw new StitchCheckoutError('STITCH_API_REQUEST_FAILED', 'Stitch Express rejected the request.')
-  }
+ 
+if (!response.ok || !isRecord(payload) || payload.success === false) {
+  const details = isRecord(payload)
+    ? {
+        message: payload.message,
+        error: payload.error,
+        error_description: payload.error_description,
+        code: payload.code,
+        errors: payload.errors,
+      }
+    : { response: 'Non-JSON response' }
+
+  console.error('[Stitch Express API error]', {
+    endpoint: path,
+    status: response.status,
+    details,
+  })
+
+  throw new StitchCheckoutError(
+    'STITCH_API_REQUEST_FAILED',
+    `Stitch Express rejected the request (HTTP ${response.status}). Check the server logs for details.`,
+  )
+}
+
   return payload
 }
 
