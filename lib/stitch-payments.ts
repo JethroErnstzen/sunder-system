@@ -1,18 +1,12 @@
 import { prisma } from '@/lib/prisma'
 
-const TOKEN_URL = 'https://secure.stitch.money/connect/token'
-const GRAPHQL_URL = 'https://api.stitch.money/graphql'
+const EXPRESS_BASE_URL = 'https://express.stitch.money'
+const REQUEST_TIMEOUT_MS = 15000
 
-type StitchPaymentRequest = {
-  id: string
-  url: string
-}
+type StitchPaymentLink = { id: string; url: string }
 
 export class StitchCheckoutError extends Error {
-  constructor(
-    readonly code: string,
-    message: string,
-  ) {
+  constructor(readonly code: string, message: string) {
     super(message)
     this.name = 'StitchCheckoutError'
   }
@@ -22,159 +16,225 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
 }
 
-export function isStitchConfigured() {
-  return process.env.STITCH_ENABLED === 'true' &&
-    Boolean(process.env.STITCH_CLIENT_ID && process.env.STITCH_CLIENT_SECRET && process.env.STITCH_WEBHOOK_SECRET) &&
-    (process.env.STITCH_ENV === 'test' || process.env.STITCH_ENV === 'live')
-}
-
-async function getClientToken() {
+function credentials() {
   const clientId = process.env.STITCH_CLIENT_ID?.trim()
   const clientSecret = process.env.STITCH_CLIENT_SECRET?.trim()
   if (!clientId || !clientSecret) {
-    throw new StitchCheckoutError('STITCH_CREDENTIALS_MISSING', 'Stitch client credentials are missing on the staging server.')
+    throw new StitchCheckoutError('STITCH_CREDENTIALS_MISSING', 'Stitch Express credentials are missing.')
+  }
+  return { clientId, clientSecret }
+}
+
+export function isStitchConfigured() {
+  return process.env.STITCH_ENABLED === 'true'
+    && Boolean(process.env.STITCH_CLIENT_ID?.trim())
+    && Boolean(process.env.STITCH_CLIENT_SECRET?.trim())
+    && Boolean(process.env.APP_BASE_URL?.trim())
+    && (process.env.STITCH_ENV === 'test' || process.env.STITCH_ENV === 'live')
+}
+
+async function requestExpress(path: string, method: 'GET' | 'POST', body?: Record<string, unknown>) {
+  const { clientId, clientSecret } = credentials()
+
+  let tokenResponse: Response
+  try {
+    tokenResponse = await fetch(`${EXPRESS_BASE_URL}/api/v1/token`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-IS-WC': 'true',
+        'X-Stitch-Express-WC-Plugin-Version': '1.9.5',
+      },
+      body: JSON.stringify({ clientId, clientSecret }),
+      cache: 'no-store',
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    })
+  } catch {
+    throw new StitchCheckoutError('STITCH_TOKEN_CONNECTION_FAILED', 'Could not connect to Stitch Express authentication.')
   }
 
-const form = new URLSearchParams({
-  grant_type: 'client_credentials',
-  client_id: clientId,
-  client_secret: clientSecret,
-  scope: 'client_paymentrequest',
-  audience: 'https://secure.stitch.money/connect/token',
-})
+  let tokenPayload: unknown
+  try {
+    tokenPayload = await tokenResponse.json()
+  } catch {
+    throw new StitchCheckoutError('STITCH_TOKEN_RESPONSE_INVALID', 'Stitch Express returned an invalid token response.')
+  }
+
+  const tokenData = isRecord(tokenPayload) && isRecord(tokenPayload.data) ? tokenPayload.data : null
+  const accessToken = tokenData && typeof tokenData.accessToken === 'string' ? tokenData.accessToken : null
+  if (!tokenResponse.ok || !accessToken) {
+    throw new StitchCheckoutError('STITCH_TOKEN_REQUEST_FAILED', `Stitch Express authentication failed (HTTP ${tokenResponse.status}).`)
+  }
 
   let response: Response
   try {
-    response = await fetch(TOKEN_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: form,
-      signal: AbortSignal.timeout(15000),
+    response = await fetch(`${EXPRESS_BASE_URL}${path}`, {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${accessToken}`,
+        'X-IS-WC': 'true',
+        'X-Stitch-Express-WC-Plugin-Version': '1.9.5',
+      },
+      ...(method === 'POST' ? { body: JSON.stringify(body ?? {}) } : {}),
+      cache: 'no-store',
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     })
   } catch {
-    throw new StitchCheckoutError('STITCH_TOKEN_CONNECTION_FAILED', 'Could not connect to Stitch to authenticate the payment request.')
+    throw new StitchCheckoutError('STITCH_API_CONNECTION_FAILED', 'Could not connect to Stitch Express.')
   }
-  let result: unknown
+
+  let payload: unknown
   try {
-    result = await response.json()
+    payload = await response.json()
   } catch {
-    throw new StitchCheckoutError('STITCH_TOKEN_RESPONSE_INVALID', 'Stitch returned an unreadable authentication response.')
+    throw new StitchCheckoutError('STITCH_API_RESPONSE_INVALID', 'Stitch Express returned an invalid API response.')
   }
-  if (!response.ok || !isRecord(result) || typeof result.access_token !== 'string') {
-    const oauthError = typeof result === 'object' && result !== null && 'error' in result &&
-      typeof result.error === 'string' && /^[a-z][a-z0-9_]{0,63}$/.test(result.error)
-      ? `: ${result.error}`
-      : ''
-    throw new StitchCheckoutError(
-      'STITCH_TOKEN_REQUEST_FAILED',
-      `Stitch authentication failed (HTTP ${response.status}${oauthError}). Check the Live client credentials and payment-request permissions.`,
-    )
+  if (!response.ok || !isRecord(payload)) {
+    throw new StitchCheckoutError('STITCH_API_REQUEST_FAILED', `Stitch Express rejected the request (HTTP ${response.status}).`)
   }
-  return result.access_token
+  if (payload.success === false) {
+    throw new StitchCheckoutError('STITCH_API_REQUEST_FAILED', 'Stitch Express rejected the request.')
+  }
+  return payload
 }
 
-function getRedirectUrl() {
-  const baseUrl = process.env.APP_BASE_URL
-  if (!baseUrl) {
-    throw new StitchCheckoutError('APP_BASE_URL_MISSING', 'APP_BASE_URL is missing from the staging server settings.')
-  }
-  let redirectUrl: URL
+function getAppOrigin() {
+  const raw = process.env.APP_BASE_URL?.trim()
+  if (!raw) throw new StitchCheckoutError('APP_BASE_URL_MISSING', 'APP_BASE_URL is missing.')
+  let url: URL
   try {
-    redirectUrl = new URL('/checkout/payment-result', baseUrl)
+    url = new URL(raw)
   } catch {
-    throw new StitchCheckoutError('APP_BASE_URL_INVALID', 'APP_BASE_URL is invalid. Set it to the full staging website URL.')
+    throw new StitchCheckoutError('APP_BASE_URL_INVALID', 'APP_BASE_URL must be a full URL.')
   }
-  if (process.env.STITCH_ENV === 'live' && redirectUrl.protocol !== 'https:') {
-    throw new StitchCheckoutError('STITCH_RETURN_URL_INSECURE', 'Live Stitch checkout requires an HTTPS APP_BASE_URL.')
+  if (process.env.STITCH_ENV === 'live' && url.protocol !== 'https:') {
+    throw new StitchCheckoutError('STITCH_RETURN_URL_INSECURE', 'Live checkout requires an HTTPS APP_BASE_URL.')
   }
-  return redirectUrl
+  return url.origin
 }
 
-export async function createStitchPaymentRequest(order: {
-  orderNumber: string
-  total: number
-  email: string
-  customerId: string | null
-}, externalReference: string): Promise<StitchPaymentRequest> {
-  const redirectUrl = getRedirectUrl()
-  const token = await getClientToken()
-  const mutation = `
-    mutation CreatePaymentRequest($input: ClientPaymentInitiationRequestInput!) {
-      clientPaymentInitiationRequestCreate(input: $input) {
-        paymentInitiationRequest {
-          id
-          url
-        }
+export async function createStitchPaymentRequest(
+  order: { orderNumber: string; total: number; email: string; customerId: string | null },
+  externalReference: string,
+): Promise<StitchPaymentLink> {
+  const amount = Math.round(Number(order.total) * 100)
+  if (!Number.isSafeInteger(amount) || amount <= 0) {
+    throw new StitchCheckoutError('STITCH_AMOUNT_INVALID', 'The order amount is invalid.')
+  }
+
+  const callbackUrl = new URL('/api/payments/stitch/callback', getAppOrigin()).toString()
+  const response = await requestExpress('/api/v1/payments', 'POST', {
+    amount,
+    payerName: order.email.slice(0, 80),
+    payerPhoneNumber: null,
+    payerEmailAddress: order.email,
+    merchantReference: externalReference,
+    skipCheckoutPage: true,
+    currency: 'ZAR',
+  })
+
+  const data = isRecord(response.data) ? response.data : null
+  const payment = data && isRecord(data.payment) ? data.payment : null
+  const rawLink = payment && typeof payment.link === 'string' ? payment.link : null
+  const rawId = payment && (
+    typeof payment.id === 'string' ? payment.id :
+    typeof payment.paymentId === 'string' ? payment.paymentId : null
+  )
+
+  if (!rawLink) {
+    throw new StitchCheckoutError('STITCH_PAYMENT_URL_MISSING', 'Stitch Express did not return a checkout link.')
+  }
+
+  let link: URL
+  try {
+    link = new URL(rawLink)
+  } catch {
+    throw new StitchCheckoutError('STITCH_PAYMENT_URL_INVALID', 'Stitch Express returned an invalid checkout link.')
+  }
+  if (link.protocol !== 'https:' || !['express.stitch.money', 'secure.stitch.money'].includes(link.hostname)) {
+    throw new StitchCheckoutError('STITCH_PAYMENT_URL_INVALID', 'Stitch Express returned an unexpected checkout URL.')
+  }
+
+  // The existing WooCommerce plugin passes its return target as redirect_url.
+  link.searchParams.set('redirect_url', callbackUrl)
+  return { id: rawId || externalReference, url: link.toString() }
+}
+
+export async function verifyStitchExpressPayment(paymentId: string, reference: string) {
+  const query = new URLSearchParams({ merchantReference: reference })
+  const response = await requestExpress(
+    `/api/v1/payments/${encodeURIComponent(paymentId)}?${query.toString()}`,
+    'GET',
+  )
+  const data = isRecord(response.data) ? response.data : null
+  const payment = data && isRecord(data.payment) ? data.payment : null
+  const status = payment && typeof payment.status === 'string' ? payment.status.toUpperCase() : null
+  const amount = payment && (typeof payment.amount === 'number' || typeof payment.amount === 'string')
+    ? Number(payment.amount)
+    : null
+  const currency = payment && typeof payment.currency === 'string' ? payment.currency.toUpperCase() : null
+  return { status, amount, currency }
+}
+
+export async function markStitchPaymentFromExpress(paymentId: string, reference: string) {
+  const transaction = await prisma.paymentTransaction.findFirst({
+    where: { provider: 'stitch', externalRef: reference },
+    include: {
+      order: {
+        select: { id: true, orderNumber: true, total: true, paymentStatus: true },
+      },
+    },
+  })
+  if (!transaction) {
+    throw new StitchCheckoutError('STITCH_TRANSACTION_NOT_FOUND', 'No matching Stitch transaction was found.')
+  }
+
+  const verified = await verifyStitchExpressPayment(paymentId, reference)
+  const terminalFailure = ['CANCELLED', 'EXPIRED', 'FAILED'].includes(verified.status ?? '')
+
+  if (verified.status !== 'PAID' && verified.status !== 'SETTLED') {
+    if (terminalFailure) {
+      await prisma.paymentTransaction.update({
+        where: { id: transaction.id },
+        data: { status: verified.status!.toLowerCase(), externalId: paymentId },
+      })
+      if (transaction.order.paymentStatus !== 'paid') {
+        await prisma.order.update({
+          where: { id: transaction.order.id },
+          data: { paymentStatus: verified.status!.toLowerCase() },
+        })
       }
     }
-  `
-  const response = await fetch(GRAPHQL_URL, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      query: mutation,
-      variables: {
-        input: {
-          amount: { quantity: order.total.toFixed(2), currency: 'ZAR' },
-          externalReference,
-          payerInformation: { payerId: order.customerId || order.email },
-          metadata: { orderNumber: order.orderNumber },
-          expireAt: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
-        },
-      },
-    }),
-    signal: AbortSignal.timeout(15000),
+    return { paid: false, orderId: transaction.order.id, orderNumber: transaction.order.orderNumber }
+  }
+
+  const expectedCents = Math.round(Number(transaction.order.total) * 100)
+  if (verified.currency && verified.currency !== 'ZAR') {
+    throw new StitchCheckoutError('STITCH_CURRENCY_MISMATCH', 'The verified Stitch payment currency is not ZAR.')
+  }
+  // The API version used by the plugin may omit amount/currency. If amount is
+  // returned, accept cents or rands, but reject a mismatch.
+  if (verified.amount !== null && verified.amount !== expectedCents && verified.amount !== Number(transaction.order.total)) {
+    throw new StitchCheckoutError('STITCH_AMOUNT_MISMATCH', 'The verified payment amount does not match the order.')
+  }
+
+  await prisma.$transaction(async (db) => {
+    await db.paymentTransaction.update({
+      where: { id: transaction.id },
+      data: { status: 'paid', externalId: paymentId },
+    })
+    await db.order.update({
+      where: { id: transaction.order.id },
+      data: { paymentStatus: 'paid', status: 'processing' },
+    })
   })
-  let result: unknown
-  try {
-    result = await response.json()
-  } catch {
-    throw new StitchCheckoutError('STITCH_PAYMENT_RESPONSE_INVALID', 'Stitch returned an unreadable payment-request response.')
-  }
-  if (!response.ok || !isRecord(result)) {
-    throw new StitchCheckoutError('STITCH_PAYMENT_REQUEST_FAILED', `Stitch could not create the payment request (HTTP ${response.status}).`)
-  }
-
-  const errors = Array.isArray(result.errors) ? result.errors : []
-  const data = isRecord(result.data) ? result.data : null
-  const create = data && isRecord(data.clientPaymentInitiationRequestCreate)
-    ? data.clientPaymentInitiationRequestCreate
-    : null
-  const payment = create && isRecord(create.paymentInitiationRequest)
-    ? create.paymentInitiationRequest
-    : null
-  if (errors.length || !payment || typeof payment.id !== 'string' || typeof payment.url !== 'string') {
-    throw new StitchCheckoutError(
-      errors.length ? 'STITCH_PAYMENT_REQUEST_REJECTED' : 'STITCH_PAYMENT_RESPONSE_INVALID',
-      errors.length
-        ? 'Stitch rejected the payment request. Check the Live client permissions and payment request settings.'
-        : 'Stitch returned a response without a valid payment URL.',
-    )
-  }
-
-  let paymentUrl: URL
-  try {
-    paymentUrl = new URL(payment.url)
-  } catch {
-    throw new StitchCheckoutError('STITCH_PAYMENT_URL_INVALID', 'Stitch returned an invalid payment URL.')
-  }
-  if (
-    paymentUrl.protocol !== 'https:' ||
-    !['secure.stitch.money', 'secure-local.stitchmoney.com'].includes(paymentUrl.hostname)
-  ) {
-    throw new StitchCheckoutError('STITCH_PAYMENT_URL_INVALID', 'Stitch returned an unexpected payment URL.')
-  }
-  paymentUrl.searchParams.set('redirect_uri', redirectUrl.toString())
-
-  return { id: payment.id, url: paymentUrl.toString() }
+  return { paid: true, orderId: transaction.order.id, orderNumber: transaction.order.orderNumber }
 }
 
 export async function startStitchCheckout(orderId: string, email: string) {
   if (!isStitchConfigured()) {
-    return { error: 'Stitch Express is not configured yet. Please choose EFT or contact Sunder Computers.' as const }
+    return { error: 'Stitch Express is not configured. Please choose another payment method or contact Sunder Computers.' as const }
   }
 
   const order = await prisma.order.findFirst({
@@ -184,9 +244,7 @@ export async function startStitchCheckout(orderId: string, email: string) {
   if (!order || order.email.toLowerCase() !== email.toLowerCase()) {
     return { error: 'Order could not be verified.' as const }
   }
-  if (order.paymentStatus === 'paid') {
-    return { error: 'This order has already been paid.' as const }
-  }
+  if (order.paymentStatus === 'paid') return { error: 'This order has already been paid.' as const }
 
   const existing = await prisma.paymentTransaction.findFirst({
     where: { orderId: order.id, provider: 'stitch', status: { in: ['pending', 'initiating'] } },
@@ -203,16 +261,14 @@ export async function startStitchCheckout(orderId: string, email: string) {
     data: { orderId: order.id, provider: 'stitch', status: 'initiating' },
   })
   const externalReference = `${order.orderNumber}:${transaction.id}`
-  await prisma.paymentTransaction.update({
-    where: { id: transaction.id },
-    data: { externalRef: externalReference },
-  })
-  await prisma.order.update({
-    where: { id: order.id },
-    data: { paymentStatus: 'pending' },
-  })
 
   try {
+    await prisma.paymentTransaction.update({
+      where: { id: transaction.id },
+      data: { externalRef: externalReference },
+    })
+    await prisma.order.update({ where: { id: order.id }, data: { paymentStatus: 'pending' } })
+
     const payment = await createStitchPaymentRequest(order, externalReference)
     const updated = await prisma.paymentTransaction.update({
       where: { id: transaction.id },
