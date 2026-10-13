@@ -39,7 +39,6 @@ async function getClientToken() {
     client_id: clientId,
     client_secret: clientSecret,
     scope: 'client_paymentrequest',
-    audience: TOKEN_URL,
   })
   let response: Response
   try {
