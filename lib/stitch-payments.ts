@@ -278,7 +278,7 @@ export async function startStitchCheckout(orderId: string, email: string) {
   const transaction = await prisma.paymentTransaction.create({
     data: { orderId: order.id, provider: 'stitch', status: 'initiating' },
   })
-  const externalReference = `${order.orderNumber}:${transaction.id}`
+  const externalReference = `${order.orderNumber}-${transaction.id}`
 
   try {
     await prisma.paymentTransaction.update({
