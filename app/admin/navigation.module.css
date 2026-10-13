@@ -66,15 +66,3 @@
   .links { order: 3; width: 100%; justify-content: space-between; }
   .links a { padding: 9px 10px; }
 }
-
-:global(.inventory-admin),
-:global(.admin-product-page) {
-  padding-top: 30px;
-}
-
-@media (max-width: 600px) {
-  :global(.inventory-admin),
-  :global(.admin-product-page) {
-    padding-top: 22px;
-  }
-}

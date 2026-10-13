@@ -206,4 +206,8 @@ export async function sendOrderEmails(order: OrderForEmail) {
       console.error(index === 0 ? 'Customer VAT invoice email failed:' : 'New order notification email failed:', outcome.reason)
     }
   })
+  return {
+    customerEmailSent: outcomes[0].status === 'fulfilled',
+    adminEmailSent: outcomes[1].status === 'fulfilled',
+  }
 }

@@ -2,6 +2,7 @@ import { prisma } from '@/lib/prisma'
 import { isAdminAuthenticated } from '@/lib/admin-auth'
 import { redirect } from 'next/navigation'
 import styles from './orders.module.css'
+import ResendOrderEmailsButton from './resend-email-button'
 
 export const dynamic = 'force-dynamic'
 
@@ -108,6 +109,9 @@ export default async function AdminOrdersPage() {
                         </ul>
                       </details>
                     </div>
+                  </div>
+                  <div className={styles.orderEmailActions}>
+                    <ResendOrderEmailsButton orderId={order.id} />
                   </div>
                 </article>
               )
