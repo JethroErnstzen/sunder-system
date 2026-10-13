@@ -110,7 +110,7 @@ if (!response.ok || !isRecord(payload) || payload.success === false) {
 
   throw new StitchCheckoutError(
     'STITCH_API_REQUEST_FAILED',
-    `Stitch Express rejected the request (HTTP ${response.status}). Check the server logs for details.`,
+`Stitch Express rejected the request (HTTP ${response.status}): ${JSON.stringify(payload)}`,
   )
 }
 
