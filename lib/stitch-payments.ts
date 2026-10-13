@@ -152,6 +152,11 @@ export async function createStitchPaymentRequest(
     currency: 'ZAR',
   })
 
+  console.error(
+  '[Stitch Express payment creation response]',
+  JSON.stringify(response),
+)
+
   const data = isRecord(response.data) ? response.data : null
   const payment = data && isRecord(data.payment) ? data.payment : null
   const rawLink = payment && typeof payment.link === 'string' ? payment.link : null
