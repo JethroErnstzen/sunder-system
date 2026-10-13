@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server'
-import { markStitchPaymentFromExpress, StitchCheckoutError } from '@/lib/stitch-payments'
 
 export const runtime = 'nodejs'
 
@@ -16,15 +15,8 @@ export async function GET(request: Request) {
     return NextResponse.redirect(resultUrl)
   }
 
-  try {
-    const result = await markStitchPaymentFromExpress(paymentId, reference)
-    resultUrl.searchParams.set('status', result.paid ? 'success' : 'pending')
-    resultUrl.searchParams.set('orderNumber', result.orderNumber)
-    return NextResponse.redirect(resultUrl)
-  } catch (error) {
-    console.error('Stitch Express callback verification failed:', error instanceof StitchCheckoutError ? error.code : error)
-    resultUrl.searchParams.set('status', 'pending')
-    resultUrl.searchParams.set('message', 'We could not confirm your payment yet. Please contact Sunder Computers before paying again.')
-    return NextResponse.redirect(resultUrl)
-  }
+  // The result page verifies Stitch's response before displaying any status.
+  resultUrl.searchParams.set('payment_id', paymentId)
+  resultUrl.searchParams.set('reference', reference)
+  return NextResponse.redirect(resultUrl)
 }

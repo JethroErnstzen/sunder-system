@@ -141,7 +141,10 @@ export async function createStitchPaymentRequest(
     throw new StitchCheckoutError('STITCH_AMOUNT_INVALID', 'The order amount is invalid.')
   }
 
-  const callbackUrl = new URL('/api/payments/stitch/callback', getAppOrigin()).toString()
+  // Stitch only accepts return URLs registered in the merchant settings.
+  // INTEGRATIONS-SETUP.md registers /checkout/payment-result, so use that
+  // same URL here instead of the internal callback API route.
+  const callbackUrl = new URL('/checkout/payment-result', getAppOrigin()).toString()
   const response = await requestExpress('/api/v1/payments', 'POST', {
     amount,
     payerName: order.email.slice(0, 80),
