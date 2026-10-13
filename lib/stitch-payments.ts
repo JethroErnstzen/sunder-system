@@ -8,6 +8,16 @@ type StitchPaymentRequest = {
   url: string
 }
 
+export class StitchCheckoutError extends Error {
+  constructor(
+    readonly code: string,
+    message: string,
+  ) {
+    super(message)
+    this.name = 'StitchCheckoutError'
+  }
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
 }
@@ -21,7 +31,9 @@ export function isStitchConfigured() {
 async function getClientToken() {
   const clientId = process.env.STITCH_CLIENT_ID
   const clientSecret = process.env.STITCH_CLIENT_SECRET
-  if (!clientId || !clientSecret) throw new Error('Stitch client credentials are missing.')
+  if (!clientId || !clientSecret) {
+    throw new StitchCheckoutError('STITCH_CREDENTIALS_MISSING', 'Stitch client credentials are missing on the staging server.')
+  }
   const form = new URLSearchParams({
     grant_type: 'client_credentials',
     client_id: clientId,
@@ -29,17 +41,44 @@ async function getClientToken() {
     scope: 'client_paymentrequest',
     audience: TOKEN_URL,
   })
-  const response = await fetch(TOKEN_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: form,
-    signal: AbortSignal.timeout(15000),
-  })
-  const result: unknown = await response.json()
+  let response: Response
+  try {
+    response = await fetch(TOKEN_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: form,
+      signal: AbortSignal.timeout(15000),
+    })
+  } catch {
+    throw new StitchCheckoutError('STITCH_TOKEN_CONNECTION_FAILED', 'Could not connect to Stitch to authenticate the payment request.')
+  }
+  let result: unknown
+  try {
+    result = await response.json()
+  } catch {
+    throw new StitchCheckoutError('STITCH_TOKEN_RESPONSE_INVALID', 'Stitch returned an unreadable authentication response.')
+  }
   if (!response.ok || !isRecord(result) || typeof result.access_token !== 'string') {
-    throw new Error(`Stitch client token request failed (${response.status}).`)
+    throw new StitchCheckoutError('STITCH_TOKEN_REQUEST_FAILED', `Stitch authentication failed (HTTP ${response.status}). Check the Live client credentials and payment-request permissions.`)
   }
   return result.access_token
+}
+
+function getRedirectUrl() {
+  const baseUrl = process.env.APP_BASE_URL
+  if (!baseUrl) {
+    throw new StitchCheckoutError('APP_BASE_URL_MISSING', 'APP_BASE_URL is missing from the staging server settings.')
+  }
+  let redirectUrl: URL
+  try {
+    redirectUrl = new URL('/checkout/payment-result', baseUrl)
+  } catch {
+    throw new StitchCheckoutError('APP_BASE_URL_INVALID', 'APP_BASE_URL is invalid. Set it to the full staging website URL.')
+  }
+  if (process.env.STITCH_ENV === 'live' && redirectUrl.protocol !== 'https:') {
+    throw new StitchCheckoutError('STITCH_RETURN_URL_INSECURE', 'Live Stitch checkout requires an HTTPS APP_BASE_URL.')
+  }
+  return redirectUrl
 }
 
 export async function createStitchPaymentRequest(order: {
@@ -48,6 +87,7 @@ export async function createStitchPaymentRequest(order: {
   email: string
   customerId: string | null
 }, externalReference: string): Promise<StitchPaymentRequest> {
+  const redirectUrl = getRedirectUrl()
   const token = await getClientToken()
   const mutation = `
     mutation CreatePaymentRequest($input: ClientPaymentInitiationRequestInput!) {
@@ -79,9 +119,14 @@ export async function createStitchPaymentRequest(order: {
     }),
     signal: AbortSignal.timeout(15000),
   })
-  const result: unknown = await response.json()
+  let result: unknown
+  try {
+    result = await response.json()
+  } catch {
+    throw new StitchCheckoutError('STITCH_PAYMENT_RESPONSE_INVALID', 'Stitch returned an unreadable payment-request response.')
+  }
   if (!response.ok || !isRecord(result)) {
-    throw new Error(`Stitch payment request failed (${response.status}).`)
+    throw new StitchCheckoutError('STITCH_PAYMENT_REQUEST_FAILED', `Stitch could not create the payment request (HTTP ${response.status}).`)
   }
 
   const errors = Array.isArray(result.errors) ? result.errors : []
@@ -93,22 +138,25 @@ export async function createStitchPaymentRequest(order: {
     ? create.paymentInitiationRequest
     : null
   if (errors.length || !payment || typeof payment.id !== 'string' || typeof payment.url !== 'string') {
-    const messages = errors.map((error) => isRecord(error) && typeof error.message === 'string' ? error.message : 'GraphQL error')
-    throw new Error(messages.join('; ') || 'Stitch did not return a payment request.')
+    throw new StitchCheckoutError(
+      errors.length ? 'STITCH_PAYMENT_REQUEST_REJECTED' : 'STITCH_PAYMENT_RESPONSE_INVALID',
+      errors.length
+        ? 'Stitch rejected the payment request. Check the Live client permissions and payment request settings.'
+        : 'Stitch returned a response without a valid payment URL.',
+    )
   }
 
-  const paymentUrl = new URL(payment.url)
+  let paymentUrl: URL
+  try {
+    paymentUrl = new URL(payment.url)
+  } catch {
+    throw new StitchCheckoutError('STITCH_PAYMENT_URL_INVALID', 'Stitch returned an invalid payment URL.')
+  }
   if (
     paymentUrl.protocol !== 'https:' ||
     !['secure.stitch.money', 'secure-local.stitchmoney.com'].includes(paymentUrl.hostname)
   ) {
-    throw new Error('Stitch returned an unexpected payment URL.')
-  }
-  const baseUrl = process.env.APP_BASE_URL
-  if (!baseUrl) throw new Error('APP_BASE_URL must be configured for Stitch checkout.')
-  const redirectUrl = new URL('/checkout/payment-result', baseUrl)
-  if (process.env.STITCH_ENV === 'live' && redirectUrl.protocol !== 'https:') {
-    throw new Error('Live Stitch checkout requires an HTTPS APP_BASE_URL.')
+    throw new StitchCheckoutError('STITCH_PAYMENT_URL_INVALID', 'Stitch returned an unexpected payment URL.')
   }
   paymentUrl.searchParams.set('redirect_uri', redirectUrl.toString())
 

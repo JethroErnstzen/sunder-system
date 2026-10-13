@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { startStitchCheckout } from '@/lib/stitch-payments'
+import { startStitchCheckout, StitchCheckoutError } from '@/lib/stitch-payments'
 
 export async function POST(request: Request) {
   try {
@@ -25,6 +25,15 @@ export async function POST(request: Request) {
     return NextResponse.json(result)
   } catch (error) {
     console.error('Start Stitch checkout error:', error)
-    return NextResponse.json({ error: 'Unable to start Stitch checkout. Please retry or contact Sunder Computers.' }, { status: 502 })
+    if (error instanceof StitchCheckoutError) {
+      return NextResponse.json(
+        { error: `${error.message} (Code: ${error.code})`, diagnosticCode: error.code },
+        { status: 502 },
+      )
+    }
+    return NextResponse.json({
+      error: 'Unable to start Stitch checkout. Please contact Sunder Computers with diagnostic code STITCH_CHECKOUT_INTERNAL_ERROR.',
+      diagnosticCode: 'STITCH_CHECKOUT_INTERNAL_ERROR',
+    }, { status: 502 })
   }
 }
