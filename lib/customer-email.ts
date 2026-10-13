@@ -1,5 +1,11 @@
 import nodemailer from 'nodemailer'
 
+type MailAttachment = {
+  filename: string
+  content: Buffer | string
+  contentType?: string
+}
+
 function getMailConfig() {
   const host = process.env.SMTP_HOST
   const from = process.env.SMTP_FROM
@@ -27,6 +33,27 @@ export function assertCustomerEmailConfigured() {
 }
 
 export async function sendPasswordResetEmail(email: string, resetUrl: string) {
+  await sendEmail({
+    to: email,
+    subject: 'Set up your Sunder Computers account password',
+    text: `We have created a new Sunder Computers website. Use this secure link to set or reset your password and access your account: ${resetUrl}\n\nThis link expires in 30 minutes. If you did not request it, you can ignore this email.`,
+    html: `<p>We have created a new Sunder Computers website.</p><p><a href="${resetUrl}">Set or reset your password</a> to access your account.</p><p>This secure link expires in 30 minutes. If you did not request it, you can ignore this email.</p>`,
+  })
+}
+
+export async function sendEmail({
+  to,
+  subject,
+  text,
+  html,
+  attachments,
+}: {
+  to: string
+  subject: string
+  text: string
+  html?: string
+  attachments?: MailAttachment[]
+}) {
   const config = getMailConfig()
   const transporter = nodemailer.createTransport({
     host: config.host,
@@ -37,10 +64,11 @@ export async function sendPasswordResetEmail(email: string, resetUrl: string) {
 
   await transporter.sendMail({
     from: config.from,
-    to: email,
-    subject: 'Set up your Sunder Computers account password',
-    text: `We have created a new Sunder Computers website. Use this secure link to set or reset your password and access your account: ${resetUrl}\n\nThis link expires in 30 minutes. If you did not request it, you can ignore this email.`,
-    html: `<p>We have created a new Sunder Computers website.</p><p><a href="${resetUrl}">Set or reset your password</a> to access your account.</p><p>This secure link expires in 30 minutes. If you did not request it, you can ignore this email.</p>`,
+    to,
+    subject,
+    text,
+    ...(html ? { html } : {}),
+    ...(attachments ? { attachments } : {}),
   })
 }
 

@@ -138,7 +138,7 @@ export default function Inventory() {
     const confirmation = lifecycleAction === "sold"
       ? "Mark this product as sold? It will move to the sold archive."
       : lifecycleAction === "archive"
-        ? "Archive this product? It will be removed from active stock but kept in your records."
+        ? "Delete this product from active inventory? It will be removed from sale and kept in Archived so order records stay intact."
         : "Restore this product to active inventory?";
     if (!confirm(confirmation)) return;
     const r = await fetch("/api/admin/products", {
@@ -166,11 +166,6 @@ export default function Inventory() {
     ? Math.round(soldDurations.reduce((sum, duration) => sum + duration, 0) / soldDurations.length)
     : null;
 
-  async function logout() {
-    await fetch("/api/admin/logout", { method: "POST" });
-    window.location.href = "/admin-login";
-  }
-
   return (
     <main className="inventory-admin">
       <header className="inventory-head">
@@ -180,7 +175,6 @@ export default function Inventory() {
           <p>View and edit your current stock.</p>
         </div>
         <div className="inventory-head-actions">
-          <button type="button" onClick={logout}>Sign out</button>
           <a href="/admin/products">+ Add Product</a>
         </div>
       </header>
@@ -242,7 +236,7 @@ export default function Inventory() {
                   <td>{p.websiteActive ? "Live" : "Off"}</td>
                   <td>
                     <button onClick={() => openEdit(p)}>Edit</button>
-                        {status === "active" && <><button onClick={() => changeLifecycle(p.id, "sold")}>Mark sold</button><button onClick={() => changeLifecycle(p.id, "archive")}>Archive</button></>}
+                        {status === "active" && <><button onClick={() => changeLifecycle(p.id, "sold")}>Mark sold</button><button onClick={() => changeLifecycle(p.id, "archive")}>Delete</button></>}
                         {status === "sold" && <button onClick={() => changeLifecycle(p.id, "duplicate")}>Duplicate to active stock</button>}
                         {status === "archived" && <button onClick={() => changeLifecycle(p.id, "restore")}>Restore</button>}
                   </td>

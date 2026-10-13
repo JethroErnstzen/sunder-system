@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { sendOrderEmails } from '@/lib/order-emails'
 
 const OFFICE_PRICE = 499
 
@@ -62,6 +63,7 @@ export async function POST(request: Request) {
         stockNumber: product.stockNumber,
         name: product.name,
         condition: product.condition,
+        warranty: product.warranty,
         quantity,
         unitPrice: effectivePrice,
         lineTotal,
@@ -77,6 +79,7 @@ export async function POST(request: Request) {
         stockNumber: 'OFFICE-2021',
         name: 'Microsoft Office Professional Plus 2021',
         condition: 'New',
+        warranty: 'Digital licence; limited to one device and one activation',
         quantity: 1,
         unitPrice: OFFICE_PRICE,
         lineTotal: OFFICE_PRICE,
@@ -94,37 +97,49 @@ export async function POST(request: Request) {
       },
     })
 
-    const order = await prisma.order.create({
-      data: {
-        orderNumber: makeOrderNumber(),
-        customerId: customer.id,
-        paymentMethod,
-        customerType: body.customerType === 'company' ? 'company' : 'private',
-        email,
-        phone: body.phone || null,
-        firstName: body.firstName || null,
-        lastName: body.lastName || null,
-        companyName: body.companyName || null,
-        vatNumber: body.vatNumber || null,
-        registrationNumber: body.registrationNumber || null,
-        billingAddress: body.billingAddress || null,
-        billingSuburb: body.billingSuburb || null,
-        billingCity: body.billingCity || null,
-        billingProvince: body.billingProvince || null,
-        billingPostalCode: body.billingPostalCode || null,
-        shippingAddress: body.shippingAddress || null,
-        shippingSuburb: body.shippingSuburb || null,
-        shippingCity: body.shippingCity || null,
-        shippingProvince: body.shippingProvince || null,
-        shippingPostalCode: body.shippingPostalCode || null,
-        subtotal,
-        shipping: 0,
-        tax,
-        total,
-        officeAddon,
-        items: { create: orderItems },
-      },
+    const order = await prisma.$transaction(async (transaction) => {
+      const sequence = await transaction.invoiceSequence.upsert({
+        where: { id: 'website-orders' },
+        create: { id: 'website-orders', lastValue: 1 },
+        update: { lastValue: { increment: 1 } },
+      })
+
+      return transaction.order.create({
+        data: {
+          invoiceNumber: sequence.lastValue,
+          orderNumber: makeOrderNumber(),
+          customerId: customer.id,
+          paymentMethod,
+          customerType: body.customerType === 'company' ? 'company' : 'private',
+          email,
+          phone: body.phone || null,
+          firstName: body.firstName || null,
+          lastName: body.lastName || null,
+          companyName: body.companyName || null,
+          vatNumber: body.vatNumber || null,
+          registrationNumber: body.registrationNumber || null,
+          billingAddress: body.billingAddress || null,
+          billingSuburb: body.billingSuburb || null,
+          billingCity: body.billingCity || null,
+          billingProvince: body.billingProvince || null,
+          billingPostalCode: body.billingPostalCode || null,
+          shippingAddress: body.shippingAddress || null,
+          shippingSuburb: body.shippingSuburb || null,
+          shippingCity: body.shippingCity || null,
+          shippingProvince: body.shippingProvince || null,
+          shippingPostalCode: body.shippingPostalCode || null,
+          subtotal,
+          shipping: 0,
+          tax,
+          total,
+          officeAddon,
+          items: { create: orderItems },
+        },
+        include: { items: true },
+      })
     })
+
+    await sendOrderEmails(order)
 
     return NextResponse.json({ orderId: order.id, orderNumber: order.orderNumber, total: order.total })
   } catch (error) {

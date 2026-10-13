@@ -69,6 +69,7 @@ model RetailListing {
 
 model Order {
   id                   String               @id @default(cuid())
+  invoiceNumber        Int?                 @unique
   customerId           String?
   orderNumber          String               @unique
   status               String               @default("pending")
@@ -138,12 +139,19 @@ model OrderItem {
   stockNumber String
   name        String
   condition   String?
+  warranty    String?
   quantity    Int
   unitPrice   Float
   lineTotal   Float
   imageUrl    String?
   product     Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
   order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+}
+
+model InvoiceSequence {
+  id        String   @id
+  lastValue Int      @default(0)
+  updatedAt DateTime @updatedAt
 }
 
 model PaymentTransaction {
