@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import ProductCard from '@/app/components/ProductCard'
+import styles from './help.module.css'
 
 type Product = {
   id: string
