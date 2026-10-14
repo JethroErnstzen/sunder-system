@@ -19,7 +19,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ or
     const result = await sendOrderEmails(order)
     if (!result.customerEmailSent || !result.adminEmailSent) {
       return NextResponse.json({
-        error: 'One or more emails could not be sent. Check the mail settings and try again.',
+        error: 'One or more emails could not be sent.',
         ...result,
       }, { status: 502 })
     }

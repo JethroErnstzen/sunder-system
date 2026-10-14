@@ -164,6 +164,16 @@ function paymentMethodLabel(method: string | null) {
   } as Record<string, string>)[method || ''] || 'Not specified'
 }
 
+function emailFailureDiagnostic(reason: unknown) {
+  if (!(reason instanceof Error)) return 'Unknown mail delivery error.'
+  const smtpError = reason as Error & { code?: string; responseCode?: number; command?: string }
+  const details = [smtpError.code, smtpError.responseCode ? `SMTP ${smtpError.responseCode}` : '', smtpError.command]
+    .filter(Boolean)
+    .join(' · ')
+  if (details) return details
+  return reason.message.replace(/(pass(?:word)?\s*[:=]\s*)\S+/ig, '$1[redacted]').slice(0, 200)
+}
+
 export async function sendOrderEmails(order: OrderForEmail) {
   const buyerName = [order.firstName, order.lastName].filter(Boolean).join(' ') || order.companyName || order.email
   const method = paymentMethodLabel(order.paymentMethod)
@@ -209,5 +219,9 @@ export async function sendOrderEmails(order: OrderForEmail) {
   return {
     customerEmailSent: outcomes[0].status === 'fulfilled',
     adminEmailSent: outcomes[1].status === 'fulfilled',
+    emailErrors: {
+      customer: outcomes[0].status === 'rejected' ? emailFailureDiagnostic(outcomes[0].reason) : null,
+      admin: outcomes[1].status === 'rejected' ? emailFailureDiagnostic(outcomes[1].reason) : null,
+    },
   }
 }

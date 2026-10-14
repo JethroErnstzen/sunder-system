@@ -14,7 +14,11 @@ export default function ResendOrderEmailsButton({ orderId }: { orderId: string }
     try {
       const response = await fetch(`/api/admin/orders/${encodeURIComponent(orderId)}/resend-email`, { method: 'POST' })
       const result = await response.json().catch(() => ({}))
-      if (!response.ok) throw new Error(result.error || 'Emails could not be sent.')
+      if (!response.ok) {
+        const customer = result.customerEmailSent ? 'sent' : (result.emailErrors?.customer || 'failed')
+        const sales = result.adminEmailSent ? 'sent' : (result.emailErrors?.admin || 'failed')
+        throw new Error(`${result.error || 'Emails could not be sent.'} Customer: ${customer}. Sales alert: ${sales}.`)
+      }
       setFailed(false)
       setMessage(result.message || 'Emails sent.')
     } catch (error) {
