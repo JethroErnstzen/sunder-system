@@ -122,8 +122,9 @@ export function SetCustomerPasswordForm({ token }: { token: string }) {
 
   return (
     <form className={styles.form} onSubmit={submit}>
-      <label>New password<input type="password" name="password" autoComplete="new-password" minLength={12} maxLength={200} required /></label>
-      <label>Confirm new password<input type="password" name="confirmPassword" autoComplete="new-password" minLength={12} maxLength={200} required /></label>
+      <label>New password<input type="password" name="password" autoComplete="new-password" minLength={8} maxLength={200} pattern="(?=.*[A-Z]).{8,}" title="Use at least 8 characters and include one capital letter." required /></label>
+      <label>Confirm new password<input type="password" name="confirmPassword" autoComplete="new-password" minLength={8} maxLength={200} pattern="(?=.*[A-Z]).{8,}" title="Use at least 8 characters and include one capital letter." required /></label>
+      <p className={styles.note}>Use at least 8 characters and include one capital letter.</p>
       {error && <p className={styles.error} role="alert">{error}</p>}
       <button type="submit" disabled={busy}>{busy ? 'Saving…' : 'Set password'}</button>
     </form>

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { sendOrderEmails } from '@/lib/order-emails'
+import { couponDiscount, normalizeCouponCode } from '@/lib/coupons'
 
 const OFFICE_PRICE = 499
 
@@ -33,7 +34,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Enter a valid email address.' }, { status: 400 })
     }
     const paymentMethods = ['stitch', 'eft', 'payflex', 'stitchPayLater']
-    const paymentMethod = paymentMethods.includes(body.paymentMethod) ? String(body.paymentMethod) : null
+    const requestedPaymentMethod = paymentMethods.includes(body.paymentMethod) ? String(body.paymentMethod) : null
 
     const stockNumbers = items.map((item: any) => String(item.stockNumber)).filter(Boolean)
     const products = await prisma.product.findMany({
@@ -72,8 +73,18 @@ export async function POST(request: Request) {
     }
 
     const officeAddon = Boolean(body.officeAddon) && hasLaptop
-    const total = subtotal + (officeAddon ? OFFICE_PRICE : 0)
+    const couponCode = normalizeCouponCode(body.couponCode)
+    const coupon = couponCode ? await prisma.coupon.findUnique({ where: { code: couponCode } }) : null
+    if (couponCode && !coupon) return NextResponse.json({ error: 'That discount code was not found.' }, { status: 409 })
+    let discount = 0
+    try {
+      discount = coupon ? couponDiscount(coupon, subtotal) : 0
+    } catch (error) {
+      return NextResponse.json({ error: error instanceof Error ? error.message : 'This discount code cannot be used.' }, { status: 409 })
+    }
+    const total = subtotal - discount + (officeAddon ? OFFICE_PRICE : 0)
     const tax = total - total / 1.15
+    const paymentMethod = total === 0 ? 'coupon' : requestedPaymentMethod
     if (officeAddon) {
       orderItems.push({
         stockNumber: 'OFFICE-2021',
@@ -98,6 +109,20 @@ export async function POST(request: Request) {
     })
 
     const order = await prisma.$transaction(async (transaction) => {
+      if (coupon) {
+        const currentCoupon = await transaction.coupon.findUnique({ where: { id: coupon.id } })
+        if (!currentCoupon) throw new Error('COUPON_UNAVAILABLE:That discount code is no longer available.')
+        try {
+          couponDiscount(currentCoupon, subtotal)
+        } catch (error) {
+          throw new Error(`COUPON_UNAVAILABLE:${error instanceof Error ? error.message : 'This discount code cannot be used.'}`)
+        }
+        const used = await transaction.coupon.updateMany({
+          where: { id: currentCoupon.id, active: true, usedCount: currentCoupon.usedCount },
+          data: { usedCount: { increment: 1 } },
+        })
+        if (used.count !== 1) throw new Error('COUPON_UNAVAILABLE:That discount code has just reached its usage limit. Please try again.')
+      }
       const sequence = await transaction.invoiceSequence.upsert({
         where: { id: 'website-orders' },
         create: { id: 'website-orders', lastValue: 1 },
@@ -110,6 +135,8 @@ export async function POST(request: Request) {
           orderNumber: makeOrderNumber(),
           customerId: customer.id,
           paymentMethod,
+          status: total === 0 ? 'completed' : 'pending',
+          paymentStatus: total === 0 ? 'paid' : 'pending',
           customerType: body.customerType === 'company' ? 'company' : 'private',
           email,
           phone: body.phone || null,
@@ -132,6 +159,9 @@ export async function POST(request: Request) {
           shipping: 0,
           tax,
           total,
+          couponId: coupon?.id || null,
+          couponCode: coupon?.code || null,
+          discount,
           officeAddon,
           items: { create: orderItems },
         },
@@ -141,8 +171,11 @@ export async function POST(request: Request) {
 
     await sendOrderEmails(order)
 
-    return NextResponse.json({ orderId: order.id, orderNumber: order.orderNumber, total: order.total })
+    return NextResponse.json({ orderId: order.id, orderNumber: order.orderNumber, total: order.total, paymentMethod: order.paymentMethod })
   } catch (error) {
+    if (error instanceof Error && error.message.startsWith('COUPON_UNAVAILABLE:')) {
+      return NextResponse.json({ error: error.message.slice('COUPON_UNAVAILABLE:'.length) }, { status: 409 })
+    }
     console.error('Create order error:', error)
     return NextResponse.json({ error: 'Unable to create order.' }, { status: 500 })
   }

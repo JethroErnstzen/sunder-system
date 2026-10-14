@@ -5,12 +5,12 @@ import { prisma } from '@/lib/prisma'
 
 const completeSchema = z.object({
   token: z.string().min(32).max(128),
-  password: z.string().min(12).max(200),
+  password: z.string().min(8).max(200).regex(/[A-Z]/),
 })
 
 export async function POST(request: Request) {
   const parsed = completeSchema.safeParse(await request.json().catch(() => null))
-  if (!parsed.success) return NextResponse.json({ error: 'Use a valid setup link and a password with at least 12 characters.' }, { status: 400 })
+  if (!parsed.success) return NextResponse.json({ error: 'Use a valid setup link and a password with at least 8 characters, including one capital letter.' }, { status: 400 })
 
   try {
     const tokenHash = hashPasswordResetToken(parsed.data.token)

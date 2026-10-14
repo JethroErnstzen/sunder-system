@@ -1,0 +1,32 @@
+.page{min-height:100vh;background:#f6f8fc;color:#111827;padding:38px 24px 70px}
+.shell{max-width:1320px;margin:auto}
+.header{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;margin-bottom:25px}
+.kicker{color:#3158ff;font-size:12px;font-weight:900;letter-spacing:.16em}
+.header h1{font-size:46px;line-height:1;margin:8px 0}
+.header p{margin:0;color:#687386;font-size:16px}
+.counter{padding:10px 13px;border:1px solid #dfe5ee;border-radius:8px;background:#fff;font-size:13px;font-weight:800}
+.columns{display:grid;grid-template-columns:minmax(320px,.8fr) minmax(0,1.2fr);gap:18px;align-items:start}
+.create,.list{background:#fff;border:1px solid #dfe5ee;border-radius:12px;padding:22px;box-shadow:0 6px 22px #17284a0a}
+.create h2,.list h2{font-size:20px;margin:0 0 20px}
+.create{display:grid;gap:16px}
+.create label{display:grid;gap:7px;color:#46536a;font-size:12px;font-weight:800}
+.create input,.create select{width:100%;min-width:0;height:43px;padding:0 11px;border:1px solid #ccd5e3;border-radius:7px;background:#fff;color:#111827;font:inherit;font-size:14px}
+.codeInput{display:flex;gap:8px}.codeInput input{text-transform:uppercase;font-weight:900;letter-spacing:.04em}
+.codeInput button,.actions button{border:1px solid #cfd7e4;border-radius:7px;background:#fff;color:#26334b;padding:0 13px;font-size:12px;font-weight:800;white-space:nowrap}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.submit{min-height:46px;border:0;border-radius:7px;background:#111827;color:#fff;font-size:14px;font-weight:900}
+.submit:disabled{opacity:.6}
+.success,.error,.empty{margin:0;padding:12px;border-radius:7px;font-size:13px;line-height:1.45}
+.success{background:#e9f8ef;color:#187244}.error{background:#fff0ef;color:#a32820}.empty{background:#f7f9fc;color:#687386}
+.list{display:grid;gap:12px}
+.list h2{margin:0 0 4px}
+.coupon{border:1px solid #e0e6ef;border-radius:9px;padding:15px}
+.couponHead,.couponHead>div{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.couponHead strong{font-size:17px;letter-spacing:.04em}
+.couponHead>b{font-size:14px;color:#1746d1;white-space:nowrap}
+.active,.inactive{border-radius:999px;padding:4px 8px;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.06em}
+.active{background:#e6f7ed;color:#177245}.inactive{background:#eef1f5;color:#687386}
+.meta{display:flex;flex-wrap:wrap;gap:8px 16px;margin-top:11px;color:#687386;font-size:12px}
+.actions{display:flex;gap:8px;margin-top:13px}.actions button{height:34px}.actions .delete{color:#b42318}
+@media(max-width:800px){.columns{grid-template-columns:1fr}}
+@media(max-width:560px){.page{padding:25px 14px 55px}.header{align-items:flex-start;flex-direction:column}.header h1{font-size:38px}.create,.list{padding:17px}.row{grid-template-columns:1fr}.couponHead{align-items:flex-start}.couponHead>div{align-items:flex-start;flex-direction:column}}

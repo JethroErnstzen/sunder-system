@@ -32,6 +32,8 @@ type OrderForEmail = {
   shipping: number
   tax: number
   total: number
+  couponCode?: string | null
+  discount?: number
   items: InvoiceItem[]
 }
 
@@ -111,10 +113,20 @@ function makeInvoicePdf(order: OrderForEmail) {
 
     if (pageIndex === itemPages - 1) {
       const totalsY = Math.max(70, tableY - 37 - pageItems.length * 38)
-      content += pdfLine(`Subtotal (excl. VAT): ${money(order.total - order.tax)}`, 350, totalsY, 9)
-      content += pdfLine(`VAT included at 15%: ${money(order.tax)}`, 350, totalsY - 17, 9)
-      if (order.shipping > 0) content += pdfLine(`Shipping: ${money(order.shipping)}`, 350, totalsY - 34, 9)
-      const totalY = totalsY - (order.shipping > 0 ? 55 : 34)
+      const invoiceSubtotal = order.items.reduce((sum, item) => sum + item.lineTotal, 0)
+      content += pdfLine(`Subtotal (incl. VAT): ${money(invoiceSubtotal)}`, 350, totalsY, 9)
+      let nextLineY = totalsY - 17
+      if ((order.discount || 0) > 0) {
+        content += pdfLine(`Discount${order.couponCode ? ` (${order.couponCode})` : ''}: -${money(order.discount || 0)}`, 350, nextLineY, 9)
+        nextLineY -= 17
+      }
+      if (order.shipping > 0) {
+        content += pdfLine(`Shipping: ${money(order.shipping)}`, 350, nextLineY, 9)
+        nextLineY -= 17
+      }
+      content += pdfLine(`VAT included at 15%: ${money(order.tax)}`, 350, nextLineY, 9)
+      nextLineY -= 17
+      const totalY = nextLineY - 17
       content += pdfLine(`TOTAL (incl. VAT): ${money(order.total)}`, 350, totalY, 11, true)
       const bankY = totalY - 30
       content += pdfLine('Bank transfer details', 350, bankY, 9, true)
@@ -161,6 +173,7 @@ function paymentMethodLabel(method: string | null) {
     stitchPayLater: 'Stitch Pay Later',
     eft: 'EFT / Bank Transfer',
     payflex: 'Payflex',
+    coupon: 'Discount code',
   } as Record<string, string>)[method || ''] || 'Not specified'
 }
 
@@ -184,8 +197,8 @@ export async function sendOrderEmails(order: OrderForEmail) {
     await sendEmail({
       to: order.email,
       subject: `VAT invoice INV-${String(order.invoiceNumber ?? 0).padStart(6, '0')} - Sunder Computers`,
-      text: `Hello ${buyerName},\n\nThank you for your order. Your VAT invoice is attached.\n\nInvoice: INV-${String(order.invoiceNumber ?? 0).padStart(6, '0')}\nPayment method: ${method}\nPayment status: ${paymentState}\nTotal: ${money(order.total)}\n\nWarranty terms: https://www.sunder.co.za/warranty/\n\nSunder Computers`,
-      html: `<p>Hello ${escapeHtml(buyerName)},</p><p>Thank you for your order. Your VAT invoice is attached.</p><p><strong>Invoice:</strong> INV-${String(order.invoiceNumber ?? 0).padStart(6, '0')}<br><strong>Payment method:</strong> ${escapeHtml(method)}<br><strong>Payment status:</strong> ${escapeHtml(paymentState)}<br><strong>Total:</strong> ${money(order.total)}</p><p><a href="https://www.sunder.co.za/warranty/">View warranty terms</a></p><p>Sunder Computers</p>`,
+      text: `Hello ${buyerName},\n\nThank you for your order. Your VAT invoice is attached.\n\nInvoice: INV-${String(order.invoiceNumber ?? 0).padStart(6, '0')}\nPayment method: ${method}\nPayment status: ${paymentState}${order.couponCode ? `\nDiscount code: ${order.couponCode} (-${money(order.discount || 0)})` : ''}\nTotal: ${money(order.total)}\n\nWarranty terms: https://www.sunder.co.za/warranty/\n\nSunder Computers`,
+      html: `<p>Hello ${escapeHtml(buyerName)},</p><p>Thank you for your order. Your VAT invoice is attached.</p><p><strong>Invoice:</strong> INV-${String(order.invoiceNumber ?? 0).padStart(6, '0')}<br><strong>Payment method:</strong> ${escapeHtml(method)}<br><strong>Payment status:</strong> ${escapeHtml(paymentState)}${order.couponCode ? `<br><strong>Discount code:</strong> ${escapeHtml(order.couponCode)} (-${money(order.discount || 0)})` : ''}<br><strong>Total:</strong> ${money(order.total)}</p><p><a href="https://www.sunder.co.za/warranty/">View warranty terms</a></p><p>Sunder Computers</p>`,
       attachments: [{ filename: `VAT-Invoice-INV-${String(order.invoiceNumber ?? 0).padStart(6, '0')}.pdf`, content: pdf, contentType: 'application/pdf' }],
     })
   })()
@@ -203,6 +216,7 @@ export async function sendOrderEmails(order: OrderForEmail) {
       `Company: ${order.companyName || 'Private individual'}`,
       `Payment method: ${method}`,
       `Payment status: ${paymentState}`,
+      ...(order.couponCode ? [`Discount code: ${order.couponCode} (-${money(order.discount || 0)})`] : []),
       `Total: ${money(order.total)}`,
       '',
       'Items:',

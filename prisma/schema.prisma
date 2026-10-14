@@ -98,13 +98,33 @@ model Order {
   tax                  Float              @default(0)
   total                Float
   officeAddon          Boolean            @default(false)
+  couponId             String?
+  couponCode           String?
+  discount             Float               @default(0)
   createdAt            DateTime           @default(now())
   updatedAt            DateTime           @updatedAt
   customer             Customer?            @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  coupon               Coupon?             @relation(fields: [couponId], references: [id], onDelete: SetNull)
   items                OrderItem[]
   payments             PaymentTransaction[]
 
   @@index([customerId, createdAt])
+}
+
+model Coupon {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  discountType String
+  value       Float
+  minimumOrder Float?
+  maxUses     Int?
+  usedCount   Int      @default(0)
+  startsAt    DateTime?
+  expiresAt   DateTime?
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  orders      Order[]
 }
 
 model Customer {

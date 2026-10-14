@@ -51,6 +51,10 @@ export default function CheckoutPage() {
   const [customerType, setCustomerType] = useState<'private' | 'company'>('private')
   const [sameAsBilling, setSameAsBilling] = useState(true)
   const [officeAdded, setOfficeAdded] = useState(false)
+  const [couponCode, setCouponCode] = useState('')
+  const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discount: number } | null>(null)
+  const [couponMessage, setCouponMessage] = useState('')
+  const [checkingCoupon, setCheckingCoupon] = useState(false)
   const [paymentMethod, setPaymentMethod] = useState<'stitch' | 'eft' | 'payflex'>('eft')
   const [stitchAvailable, setStitchAvailable] = useState(false)
   const [stitchStatusLoading, setStitchStatusLoading] = useState(true)
@@ -88,11 +92,29 @@ export default function CheckoutPage() {
     () => items.reduce((sum, item) => sum + item.sellingPrice * item.quantity, 0),
     [items]
   )
-  const total = subtotal + (officeAdded && hasLaptop ? officePrice : 0)
+  const discount = appliedCoupon?.discount || 0
+  const total = subtotal - discount + (officeAdded && hasLaptop ? officePrice : 0)
+
+  async function applyCoupon() {
+    setCheckingCoupon(true)
+    setCouponMessage('')
+    setAppliedCoupon(null)
+    try {
+      const response = await fetch('/api/coupons/validate', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: couponCode, items: items.map(({ stockNumber, quantity }) => ({ stockNumber, quantity })) }),
+      })
+      const result = await response.json()
+      if (!response.ok) { setCouponMessage(result.error || 'This discount code cannot be used.'); return }
+      setAppliedCoupon({ code: result.code, discount: result.discount })
+      setCouponMessage(`Code applied — you save ${money(result.discount)}.`)
+    } catch { setCouponMessage('Unable to check the discount code. Please try again.') }
+    finally { setCheckingCoupon(false) }
+  }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (paymentMethod === 'stitch' && !stitchAvailable) {
+    if (total > 0 && paymentMethod === 'stitch' && !stitchAvailable) {
       setSubmitError(stitchStatusMessage || 'Stitch Express is not currently available.')
       return
     }
@@ -114,6 +136,7 @@ export default function CheckoutPage() {
         body: JSON.stringify({
           items: items.map(({ stockNumber, quantity }) => ({ stockNumber, quantity })),
           officeAddon: officeAdded,
+          couponCode: appliedCoupon?.code || null,
           paymentMethod,
           customerType,
           email: value('email'),
@@ -144,14 +167,14 @@ export default function CheckoutPage() {
         orderId: result.orderId,
         orderNumber: result.orderNumber,
         total: result.total,
-        paymentMethod,
+        paymentMethod: result.paymentMethod || paymentMethod,
         email: value('email'),
       }
       setSubmitted(confirmation)
       localStorage.removeItem('sunder-cart')
       window.dispatchEvent(new Event('sunder-cart-updated'))
 
-      if (paymentMethod === 'stitch') {
+      if (result.paymentMethod === 'stitch') {
         try {
           const paymentResponse = await fetch('/api/payments/stitch/checkout', {
             method: 'POST',
@@ -188,7 +211,7 @@ export default function CheckoutPage() {
         <div className={styles.shell}>
           <section className={styles.success}>
             <div className={styles.successIcon}>✓</div>
-            <h1>{isStitch ? 'Order created' : 'Order request received'}</h1>
+            <h1>{submitted.paymentMethod === 'coupon' ? 'Order complete' : isStitch ? 'Order created' : 'Order request received'}</h1>
             <p>Order <strong>{submitted.orderNumber}</strong> has been saved for {money(submitted.total)}. It will appear in your account after you sign in with {submitted.email}.</p>
             {submitted.paymentError ? (
               <>
@@ -223,6 +246,8 @@ export default function CheckoutPage() {
                   {retryingPayment ? 'Starting secure checkout…' : 'Retry Stitch checkout'}
                 </button>
               </>
+            ) : submitted.paymentMethod === 'coupon' ? (
+              <p>Your discount covered the full order, so no payment is due. A confirmation and VAT invoice have been sent to your email.</p>
             ) : isStitch ? (
               <p>Continue to Stitch’s secure payment page to complete your payment. Your order will update after Stitch confirms the result.</p>
             ) : submitted.paymentMethod === 'eft' ? (
@@ -449,8 +474,18 @@ export default function CheckoutPage() {
               )}
             </div>
 
+            <div className={styles.couponBox}>
+              <label htmlFor="checkout-coupon">Discount code</label>
+              <div className={styles.couponControls}>
+                <input id="checkout-coupon" value={couponCode} onChange={(event) => { setCouponCode(event.target.value.toUpperCase()); setAppliedCoupon(null); setCouponMessage('') }} placeholder="Enter code" maxLength={32} />
+                <button type="button" onClick={() => void applyCoupon()} disabled={checkingCoupon || !couponCode.trim()}>{checkingCoupon ? 'Checking…' : appliedCoupon ? 'Apply again' : 'Apply'}</button>
+              </div>
+              {couponMessage && <p className={appliedCoupon ? styles.couponSuccess : styles.couponError} role="status">{couponMessage}</p>}
+            </div>
+
             <div className={styles.lines}>
               <div><span>Products</span><strong>{money(subtotal)}</strong></div>
+              {appliedCoupon && <div><span>Discount ({appliedCoupon.code})</span><strong>−{money(discount)}</strong></div>}
               {officeAdded && hasLaptop && <div><span>Microsoft Office 2021</span><strong>{money(officePrice)}</strong></div>}
               <div><span>Shipping</span><strong className={styles.free}>FREE</strong></div>
             </div>
@@ -463,15 +498,17 @@ export default function CheckoutPage() {
             </div>
 
             <div className={styles.paymentMethods}>
-              <div className={styles.paymentHeading}>Payment Method</div>
+              <div className={styles.paymentHeading}>{total === 0 ? 'Payment' : 'Payment Method'}</div>
+              {total === 0 ? <p>Your discount covers the full order. No payment method is needed.</p> : <>
               <p role="note">{stitchStatusLoading ? 'Checking Stitch Express availability…' : paymentMethod === 'stitch' ? 'You will be redirected to Stitch Express to complete payment securely. Available payment methods depend on your Stitch account.' : 'This option does not process payment online yet; your order will be saved awaiting payment.'}</p>
               <label className={`${styles.paymentOption} ${paymentMethod === 'stitch' ? styles.paymentSelected : ''}`}><input type="radio" name="paymentMethod" value="stitch" checked={paymentMethod === 'stitch'} disabled={!stitchAvailable || stitchStatusLoading} onChange={() => setPaymentMethod('stitch')} /><span className={styles.paymentOptionCopy}><strong>Stitch Express</strong><span>Apple Pay · Google Pay · Capitec Pay · Card · BNPL</span><small>Secure payments powered by Stitch Express</small></span><img src="https://www.sunder.co.za/wp-content/plugins/stitch-express/assets/wc-logo-v2.svg" alt="" className={styles.paymentLogo} /></label>
               {stitchStatusMessage && <p role="status">{stitchStatusMessage}</p>}
               <label className={`${styles.paymentOption} ${paymentMethod === 'payflex' ? styles.paymentSelected : ''}`}><input type="radio" name="paymentMethod" value="payflex" checked={paymentMethod === 'payflex'} onChange={() => setPaymentMethod('payflex')} /><span className={styles.paymentOptionCopy}><strong>Payflex</strong><span>Pay over time with Payflex</span></span><img src="https://www.sunder.co.za/wp-content/plugins/payflex-payment-gateway/Checkout.png" alt="" className={styles.payflexLogo} /></label>
               <label className={`${styles.paymentOption} ${paymentMethod === 'eft' ? styles.paymentSelected : ''}`}><input type="radio" name="paymentMethod" value="eft" checked={paymentMethod === 'eft'} onChange={() => setPaymentMethod('eft')} /><span className={styles.paymentOptionCopy}><strong>EFT / Bank Transfer</strong><span>Pay directly into our FNB account</span></span></label>
               {paymentMethod === 'eft' && <div className={styles.eftDetails}><div className={styles.eftTitle}>EFT payment details</div><div className={styles.eftGrid}><div><span>Bank</span><strong>FNB</strong></div><div><span>Account Name</span><strong>Sunder Computers</strong></div><div><span>Account Number</span><strong>630 384 69713</strong></div><div><span>Branch Code</span><strong>220323</strong></div></div></div>}
+              </>}
               {submitError && <p role="alert">{submitError}</p>}
-              <button type="submit" className={styles.summaryPaymentButton} disabled={submitting || stitchStatusLoading}>{submitting ? 'Saving order…' : paymentMethod === 'stitch' ? 'Continue to Stitch Express' : 'Place order request'}</button>
+              <button type="submit" className={styles.summaryPaymentButton} disabled={submitting || (total > 0 && stitchStatusLoading)}>{submitting ? 'Saving order…' : total === 0 ? 'Complete order' : paymentMethod === 'stitch' ? 'Continue to Stitch Express' : 'Place order request'}</button>
             </div>
 
             <div className={styles.benefits}>

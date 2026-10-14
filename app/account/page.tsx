@@ -53,6 +53,7 @@ export default async function AccountPage() {
                     <span>Order: {order.status.replaceAll('_', ' ')}</span>
                     <span>Payment: {order.paymentStatus.replaceAll('_', ' ')}</span>
                     {order.paymentMethod && <span>Method: {order.paymentMethod === 'stitchPayLater' ? 'Stitch Pay Later' : order.paymentMethod}</span>}
+                    {order.couponCode && <span>Discount: {order.couponCode} · saved {money(order.discount)}</span>}
                   </div>
                   <ul>
                     {order.items.map((item) => <li key={item.id}>{item.name} <span>× {item.quantity} · {money(item.lineTotal)}</span></li>)}

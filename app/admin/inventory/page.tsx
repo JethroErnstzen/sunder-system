@@ -215,15 +215,17 @@ export default function Inventory() {
               const profit = effectivePrice - (Number(p.costPrice) || 0);
               return (
                 <tr key={p.id}>
-                    <td className="inventory-product">
-                    {p.images?.[0]?.url ? (
-                      <img src={p.images[0].url} alt="" />
-                    ) : (
-                      <div className="inventory-no-image">NO IMG</div>
-                    )}
-                    <div>
-                      <strong>{p.name}</strong>
-                      <span>{p.brand || ""} {p.model || ""}</span>
+                  <td className="inventory-product">
+                    <div className="inventory-product-content">
+                      {p.images?.[0]?.url ? (
+                        <img src={p.images[0].url} alt="" />
+                      ) : (
+                        <div className="inventory-no-image">NO IMG</div>
+                      )}
+                      <div>
+                        <strong>{p.name}</strong>
+                        <span>{p.brand || ""} {p.model || ""}</span>
+                      </div>
                     </div>
                   </td>
                   <td>{p.stockNumber}</td>
@@ -266,7 +268,7 @@ export default function Inventory() {
                 ["warranty","Warranty"],["costPrice","Cost Price"],["sellingPrice","Price"],["salePrice","Sale Price"],
                 ["quantity","Quantity"],["serialNumber","Serial Number"],["supplier","Supplier"]
               ].map(([k,l]) => (
-                <label key={k}>
+                <label key={k} className={k === "name" ? "inventory-edit-name" : undefined}>
                   {l}
                   {(["condition","category","cpu","ram","storage","screen","screenSize","gpu"].includes(k)) ? (() => {
                     const options = k === "condition" ? conditions : k === "category" ? categories : k === "cpu" ? cpuOptions : k === "ram" ? ramOptions : k === "storage" ? storageOptions : k === "screen" ? screenOptions : k === "gpu" ? gpuOptions : screenSizeOptions;

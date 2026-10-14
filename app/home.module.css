@@ -2,3 +2,9 @@
 @media(min-width:901px){.products{grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.section{padding:34px 0}.sectionHead{margin-bottom:14px}}
 @media(max-width:900px){.products{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}}
 .googleTrust{display:flex;align-items:center;gap:7px}.googleTrust>span:last-child{font-size:12px}.googleScore{display:flex;align-items:center;gap:5px}.googleScore strong{font-size:16px}
+/* Prevent the home content and its trust row from creating page-wide horizontal scrolling on phones. */
+.home{width:100%;max-width:100%;overflow-x:clip}
+.hero>*,.reasonGrid>*,.sectionHead>*,.products>*,.categoryGrid>*,.finder>*,.whyGrid>*,.footerCta>*{min-width:0}
+.trust{min-width:0;flex-wrap:wrap;row-gap:8px}
+.trust>div{min-width:0}
+.googleTrust{min-width:0;flex-wrap:wrap}

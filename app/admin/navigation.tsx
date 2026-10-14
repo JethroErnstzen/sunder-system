@@ -6,6 +6,8 @@ import styles from "./navigation.module.css";
 
 const links = [
   { href: "/admin/orders", label: "Orders" },
+  { href: "/admin/users", label: "Users" },
+  { href: "/admin/coupons", label: "Coupons" },
   { href: "/admin/inventory", label: "Inventory" },
   { href: "/admin/products", label: "Add product" },
 ];
@@ -25,9 +27,8 @@ export default function AdminNavigation() {
       <Link className={styles.brand} href="/admin">SUNDER <span>ADMIN</span></Link>
       <nav className={styles.links} aria-label="Admin navigation">
         {links.map((link) => {
-          const active = link.href === "/admin/products"
-            ? pathname.startsWith(link.href)
-            : pathname === link.href || (link.href === "/admin/inventory" && pathname === "/admin");
+          const active = pathname === link.href || pathname.startsWith(`${link.href}/`)
+            || (link.href === "/admin/inventory" && pathname === "/admin");
           return (
             <Link key={link.href} href={link.href} className={active ? styles.active : undefined}>
               {link.label}

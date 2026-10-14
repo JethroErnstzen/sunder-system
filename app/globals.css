@@ -949,3 +949,12 @@ main:before{
   .inventory-admin,
   .admin-product-page { padding-top: 22px; }
 }
+
+/* Keep inventory cells as table cells so row dividers span the full table. */
+.inventory-table th,
+.inventory-table td { vertical-align: middle; }
+.inventory-table td.inventory-product { display: table-cell; }
+.inventory-product-content { display: flex; align-items: center; gap: 12px; min-width: 280px; }
+.inventory-product-content > div:last-child { min-width: 0; }
+.inventory-product-content strong { display: block; line-height: 1.35; overflow-wrap: anywhere; }
+.inventory-edit-grid .inventory-edit-name { grid-column: 1 / -1; }
