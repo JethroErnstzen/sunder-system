@@ -11,18 +11,21 @@ const money = (v: any) =>
 
 const blankRetail = () => ({ retailer: "", price: "", url: "" });
 const cpuOptions = ["Celeron", "i3", "i5", "i7", "i9", "Ultra 5", "Ultra 7", "Ultra 9", "Other"];
-const gpuOptions = ["Intel UHD Integrated Graphics", "Intel Iris Xe Integrated Graphics", "AMD Radeon Integrated Graphics", "Apple Integrated Graphics", "Intel Arc Dedicated Graphics", "NVIDIA GeForce GTX Dedicated Graphics", "NVIDIA GeForce RTX Dedicated Graphics", "NVIDIA Quadro / RTX Professional Dedicated Graphics", "AMD Radeon RX Dedicated Graphics", "Other (details in description)"];
+const gpuOptions = ["Intel UHD Integrated Graphics", "Intel Iris Xe Integrated Graphics", "Intel Arc 140T Integrated Graphics", "AMD Radeon Integrated Graphics", "Apple Integrated Graphics", "NVIDIA GeForce GTX Dedicated Graphics", "NVIDIA GeForce RTX Dedicated Graphics", "NVIDIA Quadro / RTX Professional Dedicated Graphics", "AMD Radeon RX Dedicated Graphics", "Other (details in description)"];
 const conditions = ["New", "Demo", "Pre-owned", "Refurbished"];
 const categories = ["Laptops", "Desktops", "Components", "Gadgets"];
 const ramOptions = ["4GB", "8GB", "12GB", "16GB", "24GB", "32GB", "64GB"];
 const storageOptions = ["128GB", "256GB", "512GB", "1TB", "2TB", "4TB"];
 const screenSizeOptions = ["11", "13", "14", "15.6", "16", "17.3", "18"];
 const screenOptions = ["1366x768", "1600x900", "1920x1080", "1920x1200", "2240x1400", "2560x1440", "2560x1600", "2880x1800", "3024x1964", "3456x2234", "3840x2160", "Other"];
+type InventorySortKey = "product" | "stockNumber" | "quantity" | "cost" | "price" | "profit" | "daysListed" | "soldAt" | "website";
 
 export default function Inventory() {
   const [items, setItems] = useState<any[]>([]);
   const [q, setQ] = useState("");
   const [status, setStatus] = useState("active");
+  const [sortKey, setSortKey] = useState<InventorySortKey>("product");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const [edit, setEdit] = useState<any>(null);
   const [msg, setMsg] = useState("");
   const [saving, setSaving] = useState(false);
@@ -34,17 +37,50 @@ export default function Inventory() {
       .catch((e) => setMsg(e.message));
   }, [status]);
 
-  const list = useMemo(
-    () =>
-      items.filter((p) =>
+  const list = useMemo(() => {
+    const filtered = items.filter((p) =>
         [p.stockNumber, p.name, p.brand, p.model, p.serialNumber]
           .filter(Boolean)
           .join(" ")
           .toLowerCase()
           .includes(q.toLowerCase())
-      ),
-    [items, q]
-  );
+      );
+    const numericValue = (p: any, key: InventorySortKey) => {
+      const cost = Number(p.costPrice) || 0;
+      const listed = Number(p.sellingPrice) || 0;
+      const sale = Number(p.salePrice);
+      const price = sale > 0 && sale < listed ? sale : listed;
+      if (key === "quantity") return Number(p.quantity) || 0;
+      if (key === "cost") return cost;
+      if (key === "price") return price;
+      if (key === "profit") return price - cost;
+      if (key === "daysListed") return durationDays(p.listedAt || p.createdAt, status === "sold" ? p.soldAt || p.updatedAt : new Date()) ?? -1;
+      if (key === "soldAt") return p.soldAt ? new Date(p.soldAt).getTime() : 0;
+      if (key === "website") return p.websiteActive ? 1 : 0;
+      return 0;
+    };
+    return [...filtered].sort((a, b) => {
+      const direction = sortDirection === "asc" ? 1 : -1;
+      const comparison = sortKey === "product" || sortKey === "stockNumber"
+        ? String(sortKey === "product" ? a.name : a.stockNumber || "").localeCompare(String(sortKey === "product" ? b.name : b.stockNumber || ""), "en", { sensitivity: "base" })
+        : numericValue(a, sortKey) - numericValue(b, sortKey);
+      return comparison * direction || String(a.name || "").localeCompare(String(b.name || ""), "en", { sensitivity: "base" });
+    });
+  }, [items, q, sortDirection, sortKey, status]);
+
+  function toggleSort(key: InventorySortKey) {
+    if (sortKey === key) setSortDirection((direction) => direction === "asc" ? "desc" : "asc");
+    else {
+      setSortKey(key);
+      setSortDirection("asc");
+    }
+  }
+
+  function sortHeader(label: string, key: InventorySortKey) {
+    const active = sortKey === key;
+    const indicator = active ? (sortDirection === "asc" ? "↑" : "↓") : "↕";
+    return <th key={key} aria-sort={active ? (sortDirection === "asc" ? "ascending" : "descending") : "none"}><button type="button" className="inventory-sort-button" onClick={() => toggleSort(key)}>{label}<span aria-hidden="true">{indicator}</span></button></th>;
+  }
 
   function openEdit(product: any) {
     setEdit({
@@ -205,8 +241,8 @@ export default function Inventory() {
         <table className="inventory-table">
           <thead>
             <tr>
-              <th>Product</th><th>Stock</th><th>Qty</th><th>Cost</th>
-              <th>Price</th><th>Profit</th><th>{status === "sold" ? "Time to sell" : "Listed for"}</th>{status === "sold" && <th>Sold on</th>}<th>Website</th><th />
+              {sortHeader("Product", "product")}{sortHeader("Stock", "stockNumber")}{sortHeader("Qty", "quantity")}{sortHeader("Cost", "cost")}
+              {sortHeader("Price", "price")}{sortHeader("Profit", "profit")}{sortHeader(status === "sold" ? "Time to sell" : "Listed for", "daysListed")}{status === "sold" && sortHeader("Sold on", "soldAt")}{sortHeader("Website", "website")}<th />
             </tr>
           </thead>
           <tbody>

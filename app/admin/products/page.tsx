@@ -14,7 +14,7 @@ const money = (value: number) =>
 const conditions = ["New", "Demo", "Pre-owned", "Refurbished"];
 const categories = ["Laptops", "Desktops", "Components", "Gadgets"];
 const cpuOptions = ["Celeron", "i3", "i5", "i7", "i9", "Ultra 5", "Ultra 7", "Ultra 9", "Other"];
-const gpuOptions = ["Intel UHD Integrated Graphics", "Intel Iris Xe Integrated Graphics", "AMD Radeon Integrated Graphics", "Apple Integrated Graphics", "Intel Arc Dedicated Graphics", "NVIDIA GeForce GTX Dedicated Graphics", "NVIDIA GeForce RTX Dedicated Graphics", "NVIDIA Quadro / RTX Professional Dedicated Graphics", "AMD Radeon RX Dedicated Graphics", "Other (details in description)"];
+const gpuOptions = ["Intel UHD Integrated Graphics", "Intel Iris Xe Integrated Graphics", "Intel Arc 140T Integrated Graphics", "AMD Radeon Integrated Graphics", "Apple Integrated Graphics", "NVIDIA GeForce GTX Dedicated Graphics", "NVIDIA GeForce RTX Dedicated Graphics", "NVIDIA Quadro / RTX Professional Dedicated Graphics", "AMD Radeon RX Dedicated Graphics", "Other (details in description)"];
 const ramOptions = ["4GB", "8GB", "12GB", "16GB", "24GB", "32GB", "64GB"];
 const storageOptions = ["128GB", "256GB", "512GB", "1TB", "2TB", "4TB"];
 const screenSizeOptions = ["11", "13", "14", "15.6", "16", "17.3", "18"];

@@ -958,3 +958,6 @@ main:before{
 .inventory-product-content > div:last-child { min-width: 0; }
 .inventory-product-content strong { display: block; line-height: 1.35; overflow-wrap: anywhere; }
 .inventory-edit-grid .inventory-edit-name { grid-column: 1 / -1; }
+.inventory-table th .inventory-sort-button { display: inline-flex; align-items: center; gap: 7px; padding: 0; margin: 0; border: 0; background: transparent; color: inherit; font: inherit; letter-spacing: inherit; text-transform: inherit; cursor: pointer; white-space: nowrap; }
+.inventory-table th .inventory-sort-button:hover { color: #3158ff; }
+.inventory-table th .inventory-sort-button span { color: #3158ff; font-size: 14px; }

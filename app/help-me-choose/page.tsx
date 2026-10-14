@@ -106,6 +106,7 @@ function getCurrentQuestion(a: Answers): Question | null {
 
 function hasDedicatedGpu(p: Product) {
   const text = `${p.gpu || ''} ${p.name} ${p.category || ''} ${p.description || ''}`.toLowerCase()
+  if (/intel arc 140t(?: graphics)?/.test(text)) return false
   if (/no dedicated graphics|without dedicated graphics/.test(text)) return false
   return /rtx|gtx|geforce|quadro|radeon rx|arc a\d|dedicated graphics/.test(text)
 }

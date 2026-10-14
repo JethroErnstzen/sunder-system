@@ -19,6 +19,12 @@ export async function GET(request: Request) {
     Components: ["Components", "Accessories & Components", "Accessories &amp; Components"],
     Gadgets: ["Gadgets", "Mobile Phones", "Tablets", "Wearables", "Audio"],
   };
+  const conditionAliases: Record<string, string[]> = {
+    New: ["New", "new"],
+    Demo: ["Demo", "demo"],
+    "Pre-owned": ["Pre-owned", "Pre-Owned", "Pre Owned", "Preowned", "Used", "pre-owned"],
+    Refurbished: ["Refurbished", "refurbished"],
+  };
 
   const products = await prisma.product.findMany({
     where: {
@@ -26,7 +32,7 @@ export async function GET(request: Request) {
       status: "active",
       quantity: { gt: 0 },
       ...(category ? { category: { in: categoryAliases[category] || [category] } } : {}),
-      ...(condition ? { condition } : {}),
+      ...(condition ? { condition: { in: conditionAliases[condition] || [condition] } } : {}),
       ...(brand ? { brand } : {}),
       ...(ram ? { ram: { contains: ram } } : {}),
       ...(storage ? { storage: { contains: storage } } : {}),

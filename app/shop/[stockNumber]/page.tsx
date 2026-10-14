@@ -28,12 +28,12 @@ export default async function ProductPage({ params }: { params: Promise<{ stockN
         <div className={styles.eyebrow}>{product.condition}<span>•</span>{product.quantity > 0 ? 'IN STOCK' : 'OUT OF STOCK'}</div>
         <h1 className={styles.title}>{product.name}</h1>
         <div className={styles.subtitle}>{[product.cpu,product.ram,product.storage].filter(Boolean).join(' • ')}</div>
-        {(saved > 0 || salePrice) && <div className={styles.priceHighlights}>
-          {saved > 0 && <div className={styles.savingBanner}><span>YOU SAVE</span><strong>R {saved.toLocaleString('en-ZA')}</strong></div>}
-          {retailPrice && retailPrice > sellingPrice && <div className={styles.retailLine}>Retail price <s>R {Math.round(retailPrice).toLocaleString('en-ZA')}</s></div>}
-          {salePrice && <div className={styles.previousLine}>Our previous price <s>R {Math.round(listedPrice).toLocaleString('en-ZA')}</s></div>}
+        {(retailPrice || salePrice) && <div className={styles.priceHighlights}>
+          {retailPrice && retailPrice > 0 && <div className={styles.retailLine}>Retail price <s>R {Math.round(retailPrice).toLocaleString('en-ZA')}</s></div>}
+          {salePrice && <div className={styles.previousLine}>Price <s>R {Math.round(listedPrice).toLocaleString('en-ZA')}</s></div>}
         </div>}
-        <div className={`${styles.price}${salePrice ? ` ${styles.specialPrice}` : ''}`}>{salePrice ? 'Special ' : ''}R {Math.round(sellingPrice).toLocaleString('en-ZA')} <small>incl. VAT</small></div>
+        <div className={`${styles.price}${salePrice ? ` ${styles.specialPrice}` : ''}`}>{salePrice ? 'Special ' : 'Price '}R {Math.round(sellingPrice).toLocaleString('en-ZA')} <small>incl. VAT</small></div>
+        {saved > 0 && <div className={styles.savingBanner}><span>YOU SAVE</span><strong>R {saved.toLocaleString('en-ZA')}</strong></div>}
         {sellingPrice >= 100 && <div className={styles.bnpl}><StitchBNPLWidget price={sellingPrice} /></div>}
         <div className={styles.trust}><div className={styles.shipping}>FREE Nationwide Shipping</div><div>{product.warranty || 'Warranty included'}</div><div>Physical store in Bellville</div></div>
         {retailListing && <div className={styles.retailBox}><div className={styles.retailLabel}>Retail comparison</div><div className={styles.retailSingle}><div><strong>{retailListing.retailer}</strong><span>R {Math.round(retailListing.price).toLocaleString('en-ZA')}</span></div>{retailListing.url && <a href={retailListing.url} target="_blank" rel="noopener noreferrer">View retail listing ↗</a>}</div></div>}
