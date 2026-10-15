@@ -63,7 +63,7 @@ export default async function AdminUserDetailsPage({ params }: UserDetailsPagePr
     },
   })
 
-  if (!customer || (!customer.passwordHash && customer.source !== 'woocommerce')) notFound()
+  if (!customer) notFound()
 
   const lifetimeTotal = customer.orders.reduce((sum, order) => sum + order.total, 0)
   const paidTotal = customer.orders
@@ -77,7 +77,7 @@ export default async function AdminUserDetailsPage({ params }: UserDetailsPagePr
 
         <header className={styles.profileHeader}>
           <div>
-            <span className={styles.eyebrow}>{customer.passwordHash ? 'REGISTERED CUSTOMER' : 'IMPORTED CUSTOMER · PASSWORD SETUP NEEDED'}</span>
+            <span className={styles.eyebrow}>{customer.passwordHash ? 'REGISTERED CUSTOMER' : 'CUSTOMER · PASSWORD SETUP NEEDED'}</span>
             <h1>{customer.fullName || 'Name not provided'}</h1>
             <div className={styles.contact}>
               <a href={`mailto:${customer.email}`}>{customer.email}</a>

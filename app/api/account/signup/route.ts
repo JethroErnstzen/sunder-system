@@ -25,6 +25,23 @@ export async function POST(request: Request) {
   try {
     const values = parsed.data
     const email = values.email.toLowerCase()
+    // Check session signing configuration before creating a permanent customer
+    // record. Otherwise a missing secret leaves a password-bearing account that
+    // the customer cannot sign into after signup returns an error.
+    createCustomerSession('session-configuration-check', 0)
+
+    const existing = await prisma.customer.findUnique({
+      where: { email },
+      select: { passwordHash: true },
+    })
+    if (existing) {
+      return NextResponse.json({
+        error: existing.passwordHash
+          ? 'An account with this email already exists. Sign in or request a password setup link.'
+          : 'We found a customer record for this email from a previous order. Use “Already shopped with Sunder?” to request a secure password setup link and access your order history.',
+      }, { status: 409 })
+    }
+
     const passwordHash = await hashCustomerPassword(values.password)
     const customer = await prisma.customer.create({
       data: {
@@ -58,6 +75,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'An account with this email already exists. Sign in or request a password setup link.' }, { status: 409 })
     }
     console.error('Customer sign-up failed:', error)
+    if (error instanceof Error && error.message === 'CUSTOMER_SESSION_SECRET is not configured.') {
+      return NextResponse.json({ error: 'Account creation is unavailable because account security is not configured on the server. Please contact sales@sunder.co.za.' }, { status: 503 })
+    }
     return NextResponse.json({ error: 'Unable to create your account right now. Please try again.' }, { status: 500 })
   }
 }

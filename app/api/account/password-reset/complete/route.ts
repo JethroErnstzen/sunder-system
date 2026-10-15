@@ -13,6 +13,9 @@ export async function POST(request: Request) {
   if (!parsed.success) return NextResponse.json({ error: 'Use a valid setup link and a password with at least 8 characters, including one capital letter.' }, { status: 400 })
 
   try {
+    // Fail before touching the one-time token if the deployment cannot create a
+    // login session. This leaves the link usable once configuration is fixed.
+    createCustomerSession('session-configuration-check', 0)
     const tokenHash = hashPasswordResetToken(parsed.data.token)
     const passwordHash = await hashCustomerPassword(parsed.data.password)
     const customerId = await prisma.$transaction(async (tx) => {
@@ -40,6 +43,12 @@ export async function POST(request: Request) {
     return response
   } catch (error) {
     console.error('Customer password setup failed:', error)
+    if (error instanceof Error && error.message === 'CUSTOMER_SESSION_SECRET is not configured.') {
+      return NextResponse.json({ error: 'Password setup is unavailable because account security is not configured on the server. Please contact sales@sunder.co.za.' }, { status: 503 })
+    }
+    if (typeof error === 'object' && error !== null && 'code' in error && (error.code === 'P2021' || error.code === 'P2022')) {
+      return NextResponse.json({ error: 'The account database needs an update before password setup can finish. Please contact sales@sunder.co.za.' }, { status: 503 })
+    }
     return NextResponse.json({ error: 'Unable to set your password right now. Please request a new link and try again.' }, { status: 500 })
   }
 }

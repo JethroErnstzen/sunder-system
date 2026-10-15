@@ -1,5 +1,4 @@
 import Link from 'next/link'
-import type { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import styles from './users.module.css'
 
@@ -11,26 +10,18 @@ type UsersPageProps = {
 
 export default async function AdminUsersPage({ searchParams }: UsersPageProps) {
   const query = (await searchParams).q?.trim() || ''
-  const accountFilter: Prisma.CustomerWhereInput = {
-    OR: [{ passwordHash: { not: null } }, { source: 'woocommerce' }],
-  }
-  const where: Prisma.CustomerWhereInput = query
+  const where = query
     ? {
-        AND: [
-          accountFilter,
-          {
-            OR: [
-              { fullName: { contains: query } },
-              { email: { contains: query } },
-              { phone: { contains: query } },
-            ],
-          },
+        OR: [
+          { fullName: { contains: query } },
+          { email: { contains: query } },
+          { phone: { contains: query } },
         ],
       }
-    : accountFilter
+    : undefined
 
-  const [accountCount, customers] = await Promise.all([
-    prisma.customer.count({ where: accountFilter }),
+  const [customerCount, customers] = await Promise.all([
+    prisma.customer.count(),
     prisma.customer.findMany({
       where,
       orderBy: { createdAt: 'desc' },
@@ -51,20 +42,20 @@ export default async function AdminUsersPage({ searchParams }: UsersPageProps) {
         <header className={styles.header}>
           <div>
             <span className={styles.eyebrow}>SUNDER ADMIN</span>
-            <h1>Customer accounts</h1>
-            <p>Website accounts and imported customers, with their order history.</p>
+            <h1>Customers</h1>
+            <p>Registered accounts and customers from orders, with their order history.</p>
           </div>
           <div className={styles.headerActions}>
             <Link className={styles.importLink} href="/admin/users/import">Import customers</Link>
             <div className={styles.totalCard}>
-              <span>CUSTOMER ACCOUNTS</span>
-              <strong>{accountCount}</strong>
+              <span>ALL CUSTOMERS</span>
+              <strong>{customerCount}</strong>
             </div>
           </div>
         </header>
 
         <form className={styles.search} action="/admin/users" method="get">
-          <label className={styles.visuallyHidden} htmlFor="user-search">Search registered users</label>
+          <label className={styles.visuallyHidden} htmlFor="user-search">Search customers</label>
           <input id="user-search" name="q" type="search" defaultValue={query} placeholder="Search by name, email or phone" />
           <button type="submit">Search</button>
           {query && <Link href="/admin/users">Clear</Link>}
@@ -72,11 +63,11 @@ export default async function AdminUsersPage({ searchParams }: UsersPageProps) {
 
         {customers.length === 0 ? (
           <section className={styles.empty}>
-            <h2>{query ? 'No matching users' : 'No registered users yet'}</h2>
-            <p>{query ? 'Try another name, email address or phone number.' : 'Customers who set up an account will appear here.'}</p>
+            <h2>{query ? 'No matching customers' : 'No customers yet'}</h2>
+            <p>{query ? 'Try another name, email address or phone number.' : 'Customers who place an order or create an account will appear here.'}</p>
           </section>
         ) : (
-          <section className={styles.tableWrap} aria-label="Registered customers">
+          <section className={styles.tableWrap} aria-label="Customers">
             <table className={styles.table}>
               <thead>
                 <tr><th>Name</th><th>Email</th><th>Phone</th><th>Account</th><th>Orders</th><th>Last order</th><th>Added</th><th /></tr>
