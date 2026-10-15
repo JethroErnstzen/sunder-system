@@ -233,14 +233,20 @@ function scoreProduct(p: Product, a: Answers) {
 function rankProducts(products: Product[], a: Answers) {
   const candidates = baseCandidates(products)
   const matches = candidates.filter(p => productShortfalls(p, a).length === 0)
-    .sort((x, y) => scoreProduct(y, a) - scoreProduct(x, a) || currentPrice(x) - currentPrice(y))
+    .sort((x, y) => currentPrice(x) - currentPrice(y) || scoreProduct(y, a) - scoreProduct(x, a))
   const exact = matches.length >= 2
   const alternatives = exact ? [] : candidates.filter(p => productShortfalls(p, a).length > 0)
-    .sort((x, y) => productShortfalls(x, a).length - productShortfalls(y, a).length
-      || scoreProduct(y, a) - scoreProduct(x, a)
-      || currentPrice(x) - currentPrice(y))
+    .sort((x, y) => currentPrice(x) - currentPrice(y)
+      || productShortfalls(x, a).length - productShortfalls(y, a).length
+      || scoreProduct(y, a) - scoreProduct(x, a))
     .slice(0, Math.max(0, 8 - matches.length))
-  return { matches, alternatives, exact }
+  const results = [
+    ...matches.map(product => ({ product, exactMatch: true })),
+    ...alternatives.map(product => ({ product, exactMatch: false })),
+  ].sort((x, y) => currentPrice(x.product) - currentPrice(y.product)
+    || Number(y.exactMatch) - Number(x.exactMatch)
+    || x.product.name.localeCompare(y.product.name))
+  return { matches, alternatives, exact, results }
 }
 
 function requirementText(a: Answers) {
@@ -304,9 +310,15 @@ export default function HelpMeChoose() {
             <div style={{ marginTop: 18, paddingTop: 16, borderTop: '1px solid #e7edf4', display: 'grid', gap: 8, color: '#59687a', fontSize: 15, lineHeight: 1.5 }}>{advice.map(x => <p key={x} style={{ margin: 0 }}>{x}</p>)}<p style={{ margin: 0 }}>We can often increase the storage in one of our advertised laptops. If you need more storage, enquire with us.</p></div>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16, marginBottom: 14 }}><div><h2 style={{ fontSize: 28, margin: 0 }}>{ranked.exact ? 'Your matching laptops' : 'Your recommendations'}</h2><p style={{ margin: '5px 0 0', color: '#64748b', fontSize: 15 }}>{ranked.exact ? 'At least two current-stock laptops meet every requirement you selected.' : 'We found fewer than two exact matches, so we have added the closest alternatives and explained what each one is missing.'}</p></div><button type="button" onClick={restart} style={{ border: '1px solid #cbd5e1', background: '#fff', padding: '10px 15px', borderRadius: 5, fontWeight: 800, cursor: 'pointer' }}>Start again</button></div>
-          {loading ? <div style={{ background: '#fff', border: '1px solid #d9e1ec', padding: 30 }}>Loading current stock…</div> : ranked.matches.length || ranked.alternatives.length ? <>
-            {ranked.matches.length > 0 && <section className={styles.productSection}><h3 className={styles.groupTitle}>Exact matches <span>{ranked.matches.length}</span></h3><div className={styles.productGrid}>{ranked.matches.map(p => <ProductCard key={p.id} product={p} compact />)}</div></section>}
-            {ranked.alternatives.length > 0 && <section className={styles.productSection}><h3 className={styles.groupTitle}>{ranked.matches.length ? 'Other recommendations' : 'Closest alternatives'} <span>{ranked.alternatives.length}</span></h3><div className={styles.alternativeGrid}>{ranked.alternatives.map(p => <article className={styles.alternative} key={p.id}><ProductCard product={p} compact /><div className={styles.shortfall}><strong>What falls short</strong><ul>{productShortfalls(p, answers).map(reason => <li key={reason}>{reason}</li>)}</ul></div></article>)}</div></section>}
+          {loading ? <div style={{ background: '#fff', border: '1px solid #d9e1ec', padding: 30 }}>Loading current stock…</div> : ranked.results.length ? <>
+            <section className={styles.productSection}>
+              <h3 className={styles.groupTitle}>Recommendations sorted by price <span>{ranked.results.length}</span></h3>
+              <div className={styles.recommendationGrid}>{ranked.results.map(({ product, exactMatch }) => <article className={styles.recommendation} key={product.id}>
+                <div className={exactMatch ? styles.exactLabel : styles.alternativeLabel}>{exactMatch ? 'Exact match' : 'Alternative'}</div>
+                <ProductCard product={product} compact />
+                {!exactMatch && <div className={styles.shortfall}><strong>What falls short</strong><ul>{productShortfalls(product, answers).map(reason => <li key={reason}>{reason}</li>)}</ul></div>}
+              </article>)}</div>
+            </section>
           </> : <div style={{ background: '#fff', border: '1px solid #d9e1ec', padding: 30 }}>There are no laptops in stock to recommend right now. Try the shop page or restart to change your preferences.</div>}
         </div>}
       </section>

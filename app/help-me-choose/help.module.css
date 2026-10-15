@@ -8,6 +8,15 @@
 .shortfall{padding:12px 14px 14px;border-top:1px solid #e3eaf4;background:#f8faff}
 .shortfall strong{display:block;color:#8a5200;font-size:12px;letter-spacing:.03em}
 .shortfall ul{display:grid;gap:5px;margin:7px 0 0;padding-left:17px;color:#59687a;font-size:12px;line-height:1.45}
+.recommendationGrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;align-items:start}
+.recommendation{min-width:0}
+.exactLabel,.alternativeLabel{display:inline-block;margin:0 0 7px;padding:5px 8px;border-radius:4px;font-size:10px;font-weight:900;letter-spacing:.04em;text-transform:uppercase}
+.exactLabel{background:#eaf1ff;color:#245bd2}
+.alternativeLabel{background:#fff4dc;color:#8a5200}
+.recommendation .shortfall{margin-top:7px;border:1px solid #e3eaf4;border-radius:6px}
+@media(max-width:900px){.recommendationGrid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:600px){.recommendationGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}}
+@media(max-width:420px){.recommendationGrid{grid-template-columns:1fr}}
 @media(max-width:900px){.productGrid{grid-template-columns:repeat(3,minmax(0,1fr))}.alternativeGrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:600px){.productGrid,.alternativeGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.shortfall{padding:10px}.shortfall ul{padding-left:15px;font-size:11px}}
 @media(max-width:420px){.productGrid,.alternativeGrid{grid-template-columns:1fr}}

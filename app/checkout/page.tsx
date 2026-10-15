@@ -58,6 +58,8 @@ export default function CheckoutPage() {
   const [checkingCoupon, setCheckingCoupon] = useState(false)
   const [paymentMethod, setPaymentMethod] = useState<'stitch' | 'eft' | 'payflex'>('eft')
   const [stitchAvailable, setStitchAvailable] = useState(false)
+  const [payflexAvailable, setPayflexAvailable] = useState(false)
+  const [payflexEnvironment, setPayflexEnvironment] = useState('sandbox')
   const [stitchStatusLoading, setStitchStatusLoading] = useState(true)
   const [stitchStatusMessage, setStitchStatusMessage] = useState('')
 
@@ -83,18 +85,25 @@ export default function CheckoutPage() {
 
     fetch('/api/integrations/status')
       .then(async (response) => {
-        if (!response.ok) throw new Error('Unable to check Stitch availability.')
-        const status: { stitch?: { configured?: boolean } } = await response.json()
-        const available = status.stitch?.configured === true
-        setStitchAvailable(available)
-        setPaymentMethod(available ? 'stitch' : 'eft')
-        if (!available) {
-          setStitchStatusMessage('Stitch Express is not configured yet. Please choose EFT.')
+        if (!response.ok) throw new Error('Unable to check payment availability.')
+        const status: { stitch?: { configured?: boolean }; payflex?: { configured?: boolean; environment?: string } } = await response.json()
+        const stitchConfigured = status.stitch?.configured === true
+        const payflexConfigured = status.payflex?.configured === true
+        setStitchAvailable(stitchConfigured)
+        setPayflexAvailable(payflexConfigured)
+        setPayflexEnvironment(status.payflex?.environment || 'sandbox')
+        setPaymentMethod(stitchConfigured ? 'stitch' : payflexConfigured ? 'payflex' : 'eft')
+        if (!stitchConfigured) {
+          setStitchStatusMessage(payflexConfigured
+            ? 'Stitch Express is unavailable. You can choose Payflex or EFT.'
+            : 'Stitch Express is not configured yet. Please choose EFT.')
         }
       })
       .catch(() => {
+        setStitchAvailable(false)
+        setPayflexAvailable(false)
         setPaymentMethod('eft')
-        setStitchStatusMessage('Stitch Express availability could not be checked. Please choose EFT.')
+        setStitchStatusMessage('Online payment availability could not be checked. Please choose EFT.')
       })
       .finally(() => setStitchStatusLoading(false))
   }, [])
@@ -129,6 +138,14 @@ export default function CheckoutPage() {
     event.preventDefault()
     if (total > 0 && paymentMethod === 'stitch' && !stitchAvailable) {
       setSubmitError(stitchStatusMessage || 'Stitch Express is not currently available.')
+      return
+    }
+    if (total > 0 && paymentMethod === 'payflex' && !payflexAvailable) {
+      setSubmitError('Payflex is not currently available. Please choose EFT.')
+      return
+    }
+    if (total > 0 && paymentMethod === 'payflex' && total < 10) {
+      setSubmitError('Payflex orders must be at least R10. Please choose EFT or adjust your cart.')
       return
     }
     const form = new FormData(event.currentTarget)
@@ -187,9 +204,10 @@ export default function CheckoutPage() {
       localStorage.removeItem('sunder-cart')
       window.dispatchEvent(new Event('sunder-cart-updated'))
 
-      if (result.paymentMethod === 'stitch') {
+      if (result.paymentMethod === 'stitch' || result.paymentMethod === 'payflex') {
+        const provider = result.paymentMethod === 'payflex' ? 'Payflex' : 'Stitch'
         try {
-          const paymentResponse = await fetch('/api/payments/stitch/checkout', {
+          const paymentResponse = await fetch(`/api/payments/${result.paymentMethod}/checkout`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ orderId: result.orderId, email: value('email') }),
@@ -198,15 +216,15 @@ export default function CheckoutPage() {
           if (!paymentResponse.ok) {
             setSubmitted({
               ...confirmation,
-              paymentError: paymentResult.error || 'Stitch checkout could not be started.',
+              paymentError: paymentResult.error || `${provider} checkout could not be started.`,
             })
             return
           }
-          window.location.assign(paymentResult.paymentUrl)
+          window.location.assign(paymentResult.paymentUrl || paymentResult.redirectUrl)
         } catch {
           setSubmitted({
             ...confirmation,
-            paymentError: 'The order was saved but Stitch checkout could not be reached. Please retry.',
+            paymentError: `The order was saved but ${provider} checkout could not be reached. Please retry.`,
           })
         }
       }
@@ -219,16 +237,18 @@ export default function CheckoutPage() {
 
   if (submitted) {
     const isStitch = submitted.paymentMethod === 'stitch'
+    const isPayflex = submitted.paymentMethod === 'payflex'
+    const provider = isPayflex ? 'Payflex' : 'Stitch'
     return (
       <main className={styles.page}>
         <div className={styles.shell}>
           <section className={styles.success}>
             <div className={styles.successIcon}>✓</div>
-            <h1>{submitted.paymentMethod === 'coupon' ? 'Order complete' : isStitch ? 'Order created' : 'Order request received'}</h1>
+            <h1>{submitted.paymentMethod === 'coupon' ? 'Order complete' : isStitch || isPayflex ? 'Order created' : 'Order request received'}</h1>
             <p>Order <strong>{submitted.orderNumber}</strong> has been saved for {money(submitted.total)}. It will appear in your account after you sign in with {submitted.email}.</p>
             {submitted.paymentError ? (
               <>
-                <p role="alert">Your order is saved, but Stitch checkout could not be started: {submitted.paymentError}</p>
+                <p role="alert">Your order is saved, but {provider} checkout could not be started: {submitted.paymentError}</p>
                 {retryPaymentError && <p role="alert">{retryPaymentError}</p>}
                 <button
                   type="button"
@@ -238,31 +258,33 @@ export default function CheckoutPage() {
                     setRetryingPayment(true)
                     setRetryPaymentError('')
                     try {
-                      const response = await fetch('/api/payments/stitch/checkout', {
+                      const response = await fetch(`/api/payments/${submitted.paymentMethod}/checkout`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ orderId: submitted.orderId, email: submitted.email }),
                       })
                       const result = await response.json()
                       if (!response.ok) {
-                        setRetryPaymentError(result.error || 'Stitch checkout could not be started.')
+                        setRetryPaymentError(result.error || `${provider} checkout could not be started.`)
                         return
                       }
-                      window.location.assign(result.paymentUrl)
+                      window.location.assign(result.paymentUrl || result.redirectUrl)
                     } catch {
-                      setRetryPaymentError('Stitch checkout could not be started. Please try again.')
+                      setRetryPaymentError(`${provider} checkout could not be started. Please try again.`)
                     } finally {
                       setRetryingPayment(false)
                     }
                   }}
                 >
-                  {retryingPayment ? 'Starting secure checkout…' : 'Retry Stitch checkout'}
+                  {retryingPayment ? 'Starting secure checkout…' : `Retry ${provider} checkout`}
                 </button>
               </>
             ) : submitted.paymentMethod === 'coupon' ? (
               <p>Your discount covered the full order, so no payment is due. A confirmation and VAT invoice have been sent to your email.</p>
             ) : isStitch ? (
               <p>Continue to Stitch’s secure payment page to complete your payment. Your order will update after Stitch confirms the result.</p>
+            ) : isPayflex ? (
+              <p>Continue to Payflex’s secure payment page to complete your payment. Your order will update after Payflex confirms the result.</p>
             ) : submitted.paymentMethod === 'eft' ? (
               <p>Your order is awaiting EFT payment. The payment has not been verified automatically; Sunder Computers will confirm it before processing your order.</p>
             ) : (
@@ -513,15 +535,15 @@ export default function CheckoutPage() {
             <div className={styles.paymentMethods}>
               <div className={styles.paymentHeading}>{total === 0 ? 'Payment' : 'Payment Method'}</div>
               {total === 0 ? <p>Your discount covers the full order. No payment method is needed.</p> : <>
-              <p role="note">{stitchStatusLoading ? 'Checking Stitch Express availability…' : paymentMethod === 'stitch' ? 'You will be redirected to Stitch Express to complete payment securely. Available payment methods depend on your Stitch account.' : 'This option does not process payment online yet; your order will be saved awaiting payment.'}</p>
+              <p role="note">{stitchStatusLoading ? 'Checking payment availability…' : paymentMethod === 'stitch' ? 'You will be redirected to Stitch Express to complete payment securely. Available payment methods depend on your Stitch account.' : paymentMethod === 'payflex' ? `You will be redirected to Payflex to complete payment securely.${total < 10 ? ' Payflex requires a minimum order of R10.' : ''}` : 'Your order will be saved awaiting EFT payment.'}</p>
               <label className={`${styles.paymentOption} ${paymentMethod === 'stitch' ? styles.paymentSelected : ''}`}><input type="radio" name="paymentMethod" value="stitch" checked={paymentMethod === 'stitch'} disabled={!stitchAvailable || stitchStatusLoading} onChange={() => setPaymentMethod('stitch')} /><span className={styles.paymentOptionCopy}><strong>Stitch Express</strong><span>Apple Pay · Google Pay · Capitec Pay · Card · BNPL</span><small>Secure payments powered by Stitch Express</small></span><img src="https://www.sunder.co.za/wp-content/plugins/stitch-express/assets/wc-logo-v2.svg" alt="" className={styles.paymentLogo} /></label>
               {stitchStatusMessage && <p role="status">{stitchStatusMessage}</p>}
-              <label className={`${styles.paymentOption} ${paymentMethod === 'payflex' ? styles.paymentSelected : ''}`}><input type="radio" name="paymentMethod" value="payflex" checked={paymentMethod === 'payflex'} onChange={() => setPaymentMethod('payflex')} /><span className={styles.paymentOptionCopy}><strong>Payflex</strong><span>Pay over time with Payflex</span></span><img src="https://www.sunder.co.za/wp-content/plugins/payflex-payment-gateway/Checkout.png" alt="" className={styles.payflexLogo} /></label>
+              <label className={`${styles.paymentOption} ${paymentMethod === 'payflex' ? styles.paymentSelected : ''}`}><input type="radio" name="paymentMethod" value="payflex" checked={paymentMethod === 'payflex'} disabled={!payflexAvailable || stitchStatusLoading} onChange={() => setPaymentMethod('payflex')} /><span className={styles.paymentOptionCopy}><strong>Payflex</strong><span>Pay over time with Payflex</span><small>{payflexAvailable ? `${payflexEnvironment === 'live' ? 'Secure Payflex checkout' : 'UAT sandbox checkout'}${total > 0 && total < 10 ? ' · R10 minimum order' : ''}` : 'Currently unavailable'}</small></span><img src="https://www.sunder.co.za/wp-content/plugins/payflex-payment-gateway/Checkout.png" alt="" className={styles.payflexLogo} /></label>
               <label className={`${styles.paymentOption} ${paymentMethod === 'eft' ? styles.paymentSelected : ''}`}><input type="radio" name="paymentMethod" value="eft" checked={paymentMethod === 'eft'} onChange={() => setPaymentMethod('eft')} /><span className={styles.paymentOptionCopy}><strong>EFT / Bank Transfer</strong><span>Pay directly into our FNB account</span></span></label>
               {paymentMethod === 'eft' && <div className={styles.eftDetails}><div className={styles.eftTitle}>EFT payment details</div><div className={styles.eftGrid}><div><span>Bank</span><strong>FNB</strong></div><div><span>Account Name</span><strong>Sunder Computers</strong></div><div><span>Account Number</span><strong>630 384 69713</strong></div><div><span>Branch Code</span><strong>220323</strong></div></div></div>}
               </>}
               {submitError && <p role="alert">{submitError}</p>}
-              <button type="submit" className={styles.summaryPaymentButton} disabled={submitting || (total > 0 && stitchStatusLoading)}>{submitting ? 'Saving order…' : total === 0 ? 'Complete order' : paymentMethod === 'stitch' ? 'Continue to Stitch Express' : 'Place order request'}</button>
+              <button type="submit" className={styles.summaryPaymentButton} disabled={submitting || (total > 0 && stitchStatusLoading)}>{submitting ? 'Saving order…' : total === 0 ? 'Complete order' : paymentMethod === 'stitch' ? 'Continue to Stitch Express' : paymentMethod === 'payflex' ? 'Continue to Payflex' : 'Place order request'}</button>
             </div>
 
             <div className={styles.benefits}>

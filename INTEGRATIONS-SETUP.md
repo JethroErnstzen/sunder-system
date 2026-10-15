@@ -5,7 +5,7 @@ The new Sunder site is a custom Next.js application. WooCommerce and Elementor a
 ## Payment architecture
 
 - Stitch Express: server-side hosted-checkout integration. The application creates the order from server-verified prices, creates the Stitch payment request, and redirects to Stitch. Only signed Svix webhook events update the payment status; redirect query parameters are never treated as proof of payment.
-- Payflex: server-side API integration. Payment status will be reconciled from Payflex callbacks/status APIs.
+- Payflex: server-side hosted-checkout integration. The application creates the order with Payflex, redirects the buyer to hosted checkout, then verifies callback/return status against Payflex's order API before marking an order paid.
 - EFT: local order method; order remains Awaiting EFT Payment until verified.
 
 ### Stitch Express setup
@@ -39,6 +39,23 @@ Before setting `STITCH_ENABLED=true`, deploy the payment changes and apply the a
 The webhook handler validates Stitch's signed raw payload, matches payment events to the stored Stitch payment/request ID or link ID, and checks the amount against the order before updating its payment status. `payment.paid` and `payment.settled` are both treated as paid confirmations.
 
 The `PaymentTransaction` schema change is additive. Back up the deployment database and run `npx prisma db push` from the deployed application directory before enabling checkout.
+
+### Payflex UAT setup
+
+Payflex is disabled until both credentials are present. Set these values in Plesk's Node.js custom environment variables (keep the secret out of source control and chat):
+
+```dotenv
+APP_BASE_URL="https://staging.sunder.co.za"
+PAYFLEX_CLIENT_ID=""
+PAYFLEX_CLIENT_SECRET=""
+PAYFLEX_ENV="sandbox"
+```
+
+The sandbox auth endpoint and audience default to `https://auth-uat.payflex.co.za/auth/merchant` and `https://auth-dev.payflex.co.za`. Optional `PAYFLEX_AUTH_URL` and `PAYFLEX_AUDIENCE` overrides are available if Payflex supplies different values. The API uses `https://api.uat.payflex.co.za` in sandbox. The customer is sent to the hosted checkout URL returned by Payflex.
+
+Payflex return URLs are `https://staging.sunder.co.za/checkout/payment-result?provider=payflex`; the server callback is `https://staging.sunder.co.za/api/payments/payflex/callback`. Both payment returns and callbacks are verified against Payflex's authenticated order-status API, and the order reference and amount must match before a paid status is saved. Payflex's hosted-checkout flow returns an `orderId` to the configured redirect URL and supports a server callback for status updates. [Payflex Checkout Integration](https://docs.payflex.co.za/docs/checkout-integration)
+
+After entering credentials in Plesk, save them, rebuild the app, and restart it. Start with a small UAT order of at least R10 and use Payflex's supplied test customer. No database schema change is required for this integration.
 
 ## Sales channels
 
