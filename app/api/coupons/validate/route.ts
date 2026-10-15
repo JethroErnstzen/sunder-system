@@ -10,19 +10,25 @@ export async function POST(request: Request) {
     if (!code || !items.length) return NextResponse.json({ error: 'Enter a discount code and add products to your cart.' }, { status: 400 })
 
     const stockNumbers = items.map((item: any) => String(item.stockNumber || '')).filter(Boolean)
+    if (stockNumbers.length !== items.length || new Set(stockNumbers).size !== stockNumbers.length) {
+      return NextResponse.json({ error: 'Each product can only be added to your cart once.' }, { status: 400 })
+    }
+    if (items.some((item: any) => !Number.isInteger(Number(item.quantity)) || Number(item.quantity) < 1)) {
+      return NextResponse.json({ error: 'Enter a valid quantity for each product.' }, { status: 400 })
+    }
     const products = await prisma.product.findMany({
-      where: { stockNumber: { in: stockNumbers }, websiteActive: true },
-      select: { stockNumber: true, sellingPrice: true, salePrice: true },
+      where: { stockNumber: { in: stockNumbers }, websiteActive: true, status: 'active', quantity: { gt: 0 } },
+      select: { stockNumber: true, sellingPrice: true, salePrice: true, quantity: true },
     })
     const byStock = new Map(products.map((product) => [product.stockNumber, product]))
     let subtotal = 0
     for (const item of items) {
       const product = byStock.get(String(item.stockNumber || ''))
-      const quantity = Math.max(1, Math.min(99, Number(item.quantity) || 1))
+      const quantity = Number(item.quantity)
       const price = product?.salePrice && product.salePrice > 0 && product.salePrice < (product.sellingPrice || 0)
         ? product.salePrice
         : product?.sellingPrice
-      if (!product || !price) return NextResponse.json({ error: 'A product in your cart is no longer available.' }, { status: 409 })
+      if (!product || !price || product.quantity < quantity) return NextResponse.json({ error: 'A product in your cart is no longer available in that quantity.' }, { status: 409 })
       subtotal += price * quantity
     }
 

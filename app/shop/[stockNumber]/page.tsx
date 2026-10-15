@@ -9,8 +9,17 @@ import styles from './product.module.css'
 export default async function ProductPage({ params }: { params: Promise<{ stockNumber: string }> }) {
   const { stockNumber } = await params
   const product = await prisma.product.findUnique({ where: { stockNumber }, include: { images: { orderBy: { sortOrder: 'asc' } }, retailListings: { orderBy: { price: 'asc' } } } })
-  if (!product || !product.websiteActive || product.status !== "active") notFound()
+  if (!product || !product.websiteActive || product.status !== "active" || product.quantity <= 0) notFound()
   if (product.sellingPrice == null) notFound()
+
+  const productOrigin = process.env.APP_BASE_URL?.trim() || 'https://www.sunder.co.za'
+  let productUrl: string
+  try {
+    productUrl = new URL(`/shop/${encodeURIComponent(product.stockNumber)}`, productOrigin).toString()
+  } catch {
+    productUrl = `https://www.sunder.co.za/shop/${encodeURIComponent(product.stockNumber)}`
+  }
+  const whatsappMessage = `Hi Sunder Computers, I'd like to enquire about this product:\n${productUrl}`
 
   const retailListing = product.retailListings[0]
   const retailPrice = product.retailPrice ?? retailListing?.price ?? null
@@ -25,7 +34,7 @@ export default async function ProductPage({ params }: { params: Promise<{ stockN
     <section className={styles.top}>
       <ProductGallery images={product.images.map(image => ({id:image.id,url:image.url}))} productName={product.name}/>
       <div className={styles.info}>
-        <div className={styles.eyebrow}>{product.condition}<span>•</span>{product.quantity > 0 ? 'IN STOCK' : 'OUT OF STOCK'}</div>
+        <div className={styles.eyebrow}>{product.condition}<span>•</span>IN STOCK · {product.quantity} available</div>
         <h1 className={styles.title}>{product.name}</h1>
         <div className={styles.subtitle}>{[product.cpu,product.ram,product.storage].filter(Boolean).join(' • ')}</div>
         {(retailPrice || salePrice) && <div className={styles.priceHighlights}>
@@ -37,8 +46,8 @@ export default async function ProductPage({ params }: { params: Promise<{ stockN
         {sellingPrice >= 100 && <div className={styles.bnpl}><StitchBNPLWidget price={sellingPrice} /></div>}
         <div className={styles.trust}><div className={styles.shipping}>FREE Nationwide Shipping</div><div>{product.warranty || 'Warranty included'}</div><div>Physical store in Bellville</div></div>
         {retailListing && <div className={styles.retailBox}><div className={styles.retailLabel}>Retail comparison</div><div className={styles.retailSingle}><div><strong>{retailListing.retailer}</strong><span>R {Math.round(retailListing.price).toLocaleString('en-ZA')}</span></div>{retailListing.url && <a href={retailListing.url} target="_blank" rel="noopener noreferrer">View retail listing ↗</a>}</div></div>}
-        <AddToCartButton product={{stockNumber:product.stockNumber,name:product.name,sellingPrice:sellingPrice,listedPrice:salePrice ? listedPrice : undefined,condition:product.condition,imageUrl:product.images[0]?.url || null}} />
-        <a className={styles.whatsapp} href="https://wa.me/27610571714" target="_blank" rel="noopener noreferrer">Ask about this product on WhatsApp</a>
+        <AddToCartButton product={{stockNumber:product.stockNumber,name:product.name,sellingPrice:sellingPrice,listedPrice:salePrice ? listedPrice : undefined,condition:product.condition,imageUrl:product.images[0]?.url || null,availableQuantity:product.quantity}} />
+        <a className={styles.whatsapp} href={`https://wa.me/27610571714?text=${encodeURIComponent(whatsappMessage)}`} target="_blank" rel="noopener noreferrer">Ask about this product on WhatsApp</a>
       </div>
     </section>
     <div className={styles.lower}>

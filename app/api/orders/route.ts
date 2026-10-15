@@ -37,8 +37,14 @@ export async function POST(request: Request) {
     const requestedPaymentMethod = paymentMethods.includes(body.paymentMethod) ? String(body.paymentMethod) : null
 
     const stockNumbers = items.map((item: any) => String(item.stockNumber)).filter(Boolean)
+    if (stockNumbers.length !== items.length || new Set(stockNumbers).size !== stockNumbers.length) {
+      return NextResponse.json({ error: 'Each product can only be added to an order once.' }, { status: 400 })
+    }
+    if (items.some((item: any) => !Number.isInteger(Number(item.quantity)) || Number(item.quantity) < 1)) {
+      return NextResponse.json({ error: 'Enter a valid quantity for each product.' }, { status: 400 })
+    }
     const products = await prisma.product.findMany({
-      where: { stockNumber: { in: stockNumbers }, websiteActive: true },
+      where: { stockNumber: { in: stockNumbers }, websiteActive: true, status: 'active', quantity: { gt: 0 } },
       include: { images: { orderBy: { sortOrder: 'asc' }, take: 1 } },
     })
 
@@ -49,7 +55,7 @@ export async function POST(request: Request) {
 
     for (const cartItem of items) {
       const product = byStock.get(String(cartItem.stockNumber))
-      const quantity = Math.max(1, Math.min(99, Number(cartItem.quantity) || 1))
+      const quantity = Number(cartItem.quantity)
       const effectivePrice = product?.salePrice && product.salePrice > 0 && product.salePrice < (product.sellingPrice || 0)
         ? product.salePrice
         : product?.sellingPrice;
@@ -109,6 +115,41 @@ export async function POST(request: Request) {
     })
 
     const order = await prisma.$transaction(async (transaction) => {
+      // Claim each physical item in the same transaction as the order. The
+      // conditional decrement prevents two checkouts from claiming the last unit.
+      for (const item of orderItems) {
+        if (!item.productId) continue
+        const claimed = await transaction.product.updateMany({
+          where: {
+            id: item.productId,
+            websiteActive: true,
+            status: 'active',
+            quantity: { gte: item.quantity },
+          },
+          data: { quantity: { decrement: item.quantity } },
+        })
+        if (claimed.count !== 1) {
+          throw new Error(`STOCK_UNAVAILABLE:${item.stockNumber}`)
+        }
+        const remaining = await transaction.product.findUnique({
+          where: { id: item.productId },
+          select: { quantity: true },
+        })
+        if (remaining?.quantity === 0) {
+          const now = new Date()
+          await transaction.product.update({
+            where: { id: item.productId },
+            data: {
+              status: 'sold',
+              soldAt: now,
+              websiteActive: false,
+              googleActive: false,
+              metaActive: false,
+              takealotActive: false,
+            },
+          })
+        }
+      }
       if (coupon) {
         const currentCoupon = await transaction.coupon.findUnique({ where: { id: coupon.id } })
         if (!currentCoupon) throw new Error('COUPON_UNAVAILABLE:That discount code is no longer available.')
@@ -173,6 +214,9 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ orderId: order.id, orderNumber: order.orderNumber, total: order.total, paymentMethod: order.paymentMethod })
   } catch (error) {
+    if (error instanceof Error && error.message.startsWith('STOCK_UNAVAILABLE:')) {
+      return NextResponse.json({ error: `Product ${error.message.slice('STOCK_UNAVAILABLE:'.length)} is no longer available. Please refresh your cart.` }, { status: 409 })
+    }
     if (error instanceof Error && error.message.startsWith('COUPON_UNAVAILABLE:')) {
       return NextResponse.json({ error: error.message.slice('COUPON_UNAVAILABLE:'.length) }, { status: 409 })
     }

@@ -15,6 +15,7 @@ type CartItem = {
   isLaptop?: boolean
   image?: string | null
   imageUrl?: string | null
+  availableQuantity?: number
 }
 
 type OrderConfirmation = {
@@ -63,9 +64,21 @@ export default function CheckoutPage() {
   useEffect(() => {
     try {
       const saved = JSON.parse(localStorage.getItem('sunder-cart') || '[]')
-      setItems(Array.isArray(saved) ? saved : [])
+      const uniqueItems = new Map<string, CartItem>()
+      if (Array.isArray(saved)) {
+        for (const item of saved as CartItem[]) {
+          if (item && typeof item.stockNumber === 'string') {
+            const available = Math.max(1, Number(item.availableQuantity) || Number(item.quantity) || 1)
+            uniqueItems.set(item.stockNumber, { ...item, availableQuantity: available, quantity: Math.max(1, Math.min(available, Number(item.quantity) || 1)) })
+          }
+        }
+      }
+      const normalized = [...uniqueItems.values()]
+      setItems(normalized)
+      localStorage.setItem('sunder-cart', JSON.stringify(normalized))
     } catch {
       setItems([])
+      localStorage.removeItem('sunder-cart')
     }
 
     fetch('/api/integrations/status')
