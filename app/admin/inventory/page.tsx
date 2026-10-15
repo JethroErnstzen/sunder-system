@@ -85,6 +85,7 @@ export default function Inventory() {
   function openEdit(product: any) {
     setEdit({
       ...product,
+      images: (product.images || []).map((image: any) => ({ ...image, preview: image.url, file: null })),
       purchaseDate: product.purchaseDate
         ? String(product.purchaseDate).slice(0, 10)
         : "",
@@ -97,6 +98,43 @@ export default function Inventory() {
         })) || [],
     });
     setMsg("");
+  }
+
+  function closeEdit() {
+    edit?.images?.forEach((image: any) => { if (image.file) URL.revokeObjectURL(image.preview); });
+    setEdit(null);
+  }
+
+  function addEditImages(files: FileList | File[]) {
+    const accepted = Array.from(files).filter((file) =>
+      ["image/jpeg", "image/png", "image/webp", "image/avif"].includes(file.type),
+    );
+    setEdit((current: any) => ({
+      ...current,
+      images: [...(current.images || []), ...accepted.map((file) => ({
+        file,
+        preview: URL.createObjectURL(file),
+        url: "",
+      }))],
+    }));
+  }
+
+  function removeEditImage(index: number) {
+    setEdit((current: any) => {
+      const image = current.images[index];
+      if (image?.file) URL.revokeObjectURL(image.preview);
+      return { ...current, images: current.images.filter((_: any, i: number) => i !== index) };
+    });
+  }
+
+  function moveEditImage(from: number, to: number) {
+    setEdit((current: any) => {
+      if (to < 0 || to >= current.images.length) return current;
+      const images = [...current.images];
+      const [image] = images.splice(from, 1);
+      images.splice(to, 0, image);
+      return { ...current, images };
+    });
   }
 
   function updateRetail(index: number, key: string, value: string) {
@@ -134,10 +172,30 @@ export default function Inventory() {
     setSaving(true);
     setMsg("");
     try {
+      if (!edit.images?.length) throw new Error("Keep at least one product photo.");
+      const newImages = edit.images.filter((image: any) => image.file instanceof File);
+      let uploadedFiles: any[] = [];
+      if (newImages.length) {
+        const uploadData = new FormData();
+        newImages.forEach((image: any) => uploadData.append("files", image.file));
+        const uploadResponse = await fetch("/api/uploads/products", { method: "POST", body: uploadData });
+        const uploadResult = await uploadResponse.json();
+        if (!uploadResponse.ok) throw new Error(uploadResult.error || "Image upload failed.");
+        uploadedFiles = uploadResult.files || [];
+        if (uploadedFiles.length !== newImages.length) throw new Error("Some product photos did not upload. Please try again.");
+      }
+      let uploadIndex = 0;
+      const images = edit.images.map((image: any, index: number) => {
+        const url = image.file ? uploadedFiles[uploadIndex++]?.url : image.url;
+        return { url, sortOrder: index, isPrimary: index === 0 };
+      });
+      if (images.some((image: any) => typeof image.url !== "string" || !image.url)) {
+        throw new Error("A product photo is missing. Please remove it and upload it again.");
+      }
       const r = await fetch("/api/admin/products", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...edit, retailPrice: retailAverage || "" }),
+        body: JSON.stringify({ ...edit, images, retailPrice: retailAverage || "" }),
       });
       const d = await r.json();
       if (!r.ok) {
@@ -145,6 +203,7 @@ export default function Inventory() {
         return;
       }
       setItems((x) => x.map((p) => (p.id === d.id ? d : p)));
+      edit.images.forEach((image: any) => { if (image.file) URL.revokeObjectURL(image.preview); });
       setEdit(null);
       setMsg("Product updated successfully.");
     } catch (e: any) {
@@ -293,7 +352,7 @@ export default function Inventory() {
                 <div className="eyebrow">EDIT PRODUCT</div>
                 <h2>{edit.stockNumber} · {edit.status || "active"}</h2>
               </div>
-              <button onClick={() => setEdit(null)}>×</button>
+              <button onClick={closeEdit}>×</button>
             </div>
 
             <div className="inventory-edit-grid">
@@ -342,6 +401,33 @@ export default function Inventory() {
               Description
               <textarea rows={5} value={edit.description || ""} onChange={(e) => setEdit({ ...edit, description: e.target.value })} />
             </label>
+
+            <section className="inventory-image-editor">
+              <div className="inventory-image-editor-head">
+                <div>
+                  <h3>Product Photos</h3>
+                  <p>Add, remove or reorder photos. The first photo is the main product image.</p>
+                </div>
+              </div>
+              <label className="inventory-image-drop" onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); addEditImages(e.dataTransfer.files); }}>
+                <input type="file" accept="image/jpeg,image/png,image/webp,image/avif" multiple onChange={(e) => { if (e.target.files) addEditImages(e.target.files); e.currentTarget.value = ""; }} />
+                <strong>Drop replacement or additional photos here</strong>
+                <span>or click to browse · JPG, PNG, WEBP or AVIF · max 10MB each</span>
+              </label>
+              <div className="inventory-edit-photo-grid">
+                {edit.images.map((image: any, index: number) => (
+                  <div className="inventory-edit-photo" key={image.id || image.preview}>
+                    <img src={image.preview || image.url} alt={`${edit.name} photo ${index + 1}`} />
+                    {index === 0 && <span className="inventory-edit-primary">MAIN PHOTO</span>}
+                    <div className="inventory-edit-photo-actions">
+                      <button type="button" onClick={() => moveEditImage(index, index - 1)} disabled={index === 0}>←</button>
+                      <button type="button" onClick={() => moveEditImage(index, index + 1)} disabled={index === edit.images.length - 1}>→</button>
+                      <button type="button" onClick={() => removeEditImage(index)}>Remove</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
 
             <section className="retail-editor">
               <div className="retail-editor-head">
@@ -400,7 +486,7 @@ export default function Inventory() {
             </div>
 
             <div className="inventory-modal-actions">
-              <button onClick={() => setEdit(null)}>Cancel</button>
+              <button onClick={closeEdit}>Cancel</button>
               <button className="save" onClick={save} disabled={saving}>
                 {saving ? "Saving..." : "Save Changes"}
               </button>

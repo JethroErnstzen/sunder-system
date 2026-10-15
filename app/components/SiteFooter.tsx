@@ -13,9 +13,9 @@ export default function SiteFooter(){return <footer className={styles.footer}>
     </nav>
   </div>
   <div className={styles.contact}>
-    <a href="https://api.whatsapp.com/send?phone=27610571714"><span className={styles.icon}><ContactIcon name="whatsapp" /></span><span>+27 61 057 1714</span><b>WhatsApp</b></a>
-    <a href="mailto:sales@sunder.co.za"><span className={styles.icon}><ContactIcon name="email" /></span><span>sales@sunder.co.za</span><b>Email</b></a>
-    <a href="tel:+27218920054"><span className={styles.icon}><ContactIcon name="phone" /></span><span>+27 21 892 0054</span><b>Phone</b></a>
+    <a href="https://api.whatsapp.com/send?phone=27610571714"><span className={styles.icon}><ContactIcon name="whatsapp" /></span><span>+27 61 057 1714</span></a>
+    <a href="mailto:sales@sunder.co.za"><span className={styles.icon}><ContactIcon name="email" /></span><span>sales@sunder.co.za</span></a>
+    <a href="tel:+27218920054"><span className={styles.icon}><ContactIcon name="phone" /></span><span>+27 21 892 0054</span></a>
     <div className={styles.address}><span className={styles.icon}><ContactIcon name="location" /></span><span>Delphi Arena, Bellville, Cape Town</span></div>
   </div>
  </div>

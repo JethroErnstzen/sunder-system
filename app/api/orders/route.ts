@@ -24,6 +24,7 @@ function makeOrderNumber() {
 }
 
 export async function POST(request: Request) {
+  let stage = 'request validation'
   try {
     const body = await request.json()
     const items = Array.isArray(body.items) ? body.items : []
@@ -35,6 +36,7 @@ export async function POST(request: Request) {
     }
     const paymentMethods = ['stitch', 'eft', 'payflex', 'stitchPayLater']
     const requestedPaymentMethod = paymentMethods.includes(body.paymentMethod) ? String(body.paymentMethod) : null
+    if (!requestedPaymentMethod) return NextResponse.json({ error: 'Choose a payment method and try again.' }, { status: 400 })
 
     const stockNumbers = items.map((item: any) => String(item.stockNumber)).filter(Boolean)
     if (stockNumbers.length !== items.length || new Set(stockNumbers).size !== stockNumbers.length) {
@@ -43,6 +45,7 @@ export async function POST(request: Request) {
     if (items.some((item: any) => !Number.isInteger(Number(item.quantity)) || Number(item.quantity) < 1)) {
       return NextResponse.json({ error: 'Enter a valid quantity for each product.' }, { status: 400 })
     }
+    stage = 'checking product stock'
     const products = await prisma.product.findMany({
       where: { stockNumber: { in: stockNumbers }, websiteActive: true, status: 'active', quantity: { gt: 0 } },
       include: { images: { orderBy: { sortOrder: 'asc' }, take: 1 } },
@@ -104,6 +107,7 @@ export async function POST(request: Request) {
       })
     }
 
+    stage = 'saving customer'
     const customer = await prisma.customer.upsert({
       where: { email },
       update: {},
@@ -114,6 +118,7 @@ export async function POST(request: Request) {
       },
     })
 
+    stage = 'saving order and invoice number'
     const order = await prisma.$transaction(async (transaction) => {
       // Claim each physical item in the same transaction as the order. The
       // conditional decrement prevents two checkouts from claiming the last unit.
@@ -210,6 +215,7 @@ export async function POST(request: Request) {
       })
     })
 
+    stage = 'sending order emails'
     await sendOrderEmails(order)
 
     return NextResponse.json({ orderId: order.id, orderNumber: order.orderNumber, total: order.total, paymentMethod: order.paymentMethod })
@@ -220,7 +226,26 @@ export async function POST(request: Request) {
     if (error instanceof Error && error.message.startsWith('COUPON_UNAVAILABLE:')) {
       return NextResponse.json({ error: error.message.slice('COUPON_UNAVAILABLE:'.length) }, { status: 409 })
     }
-    console.error('Create order error:', error)
-    return NextResponse.json({ error: 'Unable to create order.' }, { status: 500 })
+    const prismaCode = typeof error === 'object' && error !== null && 'code' in error
+      && typeof error.code === 'string' ? error.code : null
+    const modelName = typeof error === 'object' && error !== null && 'meta' in error
+      && typeof error.meta === 'object' && error.meta !== null && 'modelName' in error.meta
+      && typeof error.meta.modelName === 'string' ? error.meta.modelName : null
+    console.error('Create order error:', { stage, prismaCode, modelName, error })
+
+    if (prismaCode === 'P2021' || prismaCode === 'P2022') {
+      return NextResponse.json({
+        error: modelName
+          ? `The staging database schema is missing a field or table for ${modelName}. Please sync the database schema in Plesk.`
+          : 'The staging database schema is out of date. Please sync the database schema in Plesk.',
+      }, { status: 503 })
+    }
+    if (prismaCode === 'P1001' || prismaCode === 'P1002') {
+      return NextResponse.json({ error: 'The order database is temporarily unavailable. Please try again shortly.' }, { status: 503 })
+    }
+    if (prismaCode === 'P2002') {
+      return NextResponse.json({ error: 'An order number conflict occurred. Please submit the order again.' }, { status: 409 })
+    }
+    return NextResponse.json({ error: `Unable to create order while ${stage}. Please try again or contact sales@sunder.co.za.` }, { status: 500 })
   }
 }

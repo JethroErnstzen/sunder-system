@@ -107,6 +107,18 @@ export async function PATCH(request: Request) {
     }
 
     const listings = Array.isArray(b.retailListings) ? b.retailListings : [];
+    const images = Array.isArray(b.images)
+      ? b.images
+          .map((image: any, index: number) => ({
+            url: typeof image.url === "string" ? image.url.trim() : "",
+            sortOrder: index,
+            isPrimary: index === 0,
+          }))
+          .filter((image: any) => image.url)
+      : null;
+    if (images && !images.length) {
+      return NextResponse.json({ error: "Keep at least one product photo." }, { status: 400 });
+    }
     const cleanListings = listings
       .map((x: any) => ({
         retailer: String(x.retailer || "").trim(),
@@ -180,6 +192,13 @@ export async function PATCH(request: Request) {
             price: x.price,
             url: x.url,
           })),
+        });
+      }
+
+      if (images) {
+        await tx.productImage.deleteMany({ where: { productId: b.id } });
+        await tx.productImage.createMany({
+          data: images.map((image: any) => ({ productId: b.id, ...image })),
         });
       }
 
