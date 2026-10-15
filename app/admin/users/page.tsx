@@ -11,20 +11,26 @@ type UsersPageProps = {
 
 export default async function AdminUsersPage({ searchParams }: UsersPageProps) {
   const query = (await searchParams).q?.trim() || ''
-  const registeredFilter: Prisma.CustomerWhereInput = { passwordHash: { not: null } }
+  const accountFilter: Prisma.CustomerWhereInput = {
+    OR: [{ passwordHash: { not: null } }, { source: 'woocommerce' }],
+  }
   const where: Prisma.CustomerWhereInput = query
     ? {
-        ...registeredFilter,
-        OR: [
-          { fullName: { contains: query } },
-          { email: { contains: query } },
-          { phone: { contains: query } },
+        AND: [
+          accountFilter,
+          {
+            OR: [
+              { fullName: { contains: query } },
+              { email: { contains: query } },
+              { phone: { contains: query } },
+            ],
+          },
         ],
       }
-    : registeredFilter
+    : accountFilter
 
-  const [registeredCount, customers] = await Promise.all([
-    prisma.customer.count({ where: registeredFilter }),
+  const [accountCount, customers] = await Promise.all([
+    prisma.customer.count({ where: accountFilter }),
     prisma.customer.findMany({
       where,
       orderBy: { createdAt: 'desc' },
@@ -45,12 +51,15 @@ export default async function AdminUsersPage({ searchParams }: UsersPageProps) {
         <header className={styles.header}>
           <div>
             <span className={styles.eyebrow}>SUNDER ADMIN</span>
-            <h1>Registered users</h1>
-            <p>Customer accounts and their order history.</p>
+            <h1>Customer accounts</h1>
+            <p>Website accounts and imported customers, with their order history.</p>
           </div>
-          <div className={styles.totalCard}>
-            <span>REGISTERED ACCOUNTS</span>
-            <strong>{registeredCount}</strong>
+          <div className={styles.headerActions}>
+            <Link className={styles.importLink} href="/admin/users/import">Import customers</Link>
+            <div className={styles.totalCard}>
+              <span>CUSTOMER ACCOUNTS</span>
+              <strong>{accountCount}</strong>
+            </div>
           </div>
         </header>
 
@@ -70,7 +79,7 @@ export default async function AdminUsersPage({ searchParams }: UsersPageProps) {
           <section className={styles.tableWrap} aria-label="Registered customers">
             <table className={styles.table}>
               <thead>
-                <tr><th>Name</th><th>Email</th><th>Phone</th><th>Orders</th><th>Last order</th><th>Joined</th><th /></tr>
+                <tr><th>Name</th><th>Email</th><th>Phone</th><th>Account</th><th>Orders</th><th>Last order</th><th>Added</th><th /></tr>
               </thead>
               <tbody>
                 {customers.map((customer) => {
@@ -80,6 +89,7 @@ export default async function AdminUsersPage({ searchParams }: UsersPageProps) {
                       <td><Link className={styles.nameLink} href={`/admin/users/${customer.id}`}>{customer.fullName || 'Name not provided'}</Link></td>
                       <td><a href={`mailto:${customer.email}`}>{customer.email}</a></td>
                       <td>{customer.phone || '—'}</td>
+                      <td>{customer.passwordHash ? 'Active' : 'Password setup needed'}</td>
                       <td>{customer._count.orders}</td>
                       <td>{lastOrder ? lastOrder.createdAt.toLocaleDateString('en-ZA') : '—'}</td>
                       <td>{customer.createdAt.toLocaleDateString('en-ZA')}</td>

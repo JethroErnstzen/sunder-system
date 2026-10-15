@@ -26,7 +26,41 @@ export default async function AdminOrdersPage() {
   if (!(await isAdminAuthenticated())) redirect('/admin-login')
   const orders = await prisma.order.findMany({
     orderBy: { createdAt: 'desc' },
-    include: { items: { orderBy: { id: 'asc' } } },
+    // Select the columns used on this page explicitly. The coupon columns were
+    // added after the initial staging database sync, and Prisma's default
+    // selection would request them even when the staging SQLite DB lacks them.
+    select: {
+      id: true,
+      invoiceNumber: true,
+      orderNumber: true,
+      status: true,
+      paymentStatus: true,
+      paymentMethod: true,
+      email: true,
+      phone: true,
+      firstName: true,
+      lastName: true,
+      companyName: true,
+      billingAddress: true,
+      billingSuburb: true,
+      billingCity: true,
+      billingProvince: true,
+      billingPostalCode: true,
+      total: true,
+      createdAt: true,
+      items: {
+        orderBy: { id: 'asc' },
+        select: {
+          id: true,
+          name: true,
+          stockNumber: true,
+          quantity: true,
+          condition: true,
+          warranty: true,
+          lineTotal: true,
+        },
+      },
+    },
   })
   const paidOrders = orders.filter((order) => order.paymentStatus.toLowerCase() === 'paid')
   const awaitingOrders = orders.filter((order) => order.paymentStatus.toLowerCase() !== 'paid')

@@ -24,10 +24,46 @@ export default async function AdminUserDetailsPage({ params }: UserDetailsPagePr
   const { customerId } = await params
   const customer = await prisma.customer.findUnique({
     where: { id: customerId },
-    include: { orders: { orderBy: { createdAt: 'desc' }, include: { items: { orderBy: { id: 'asc' } } } } },
+    select: {
+      id: true,
+      email: true,
+      fullName: true,
+      phone: true,
+      passwordHash: true,
+      source: true,
+      createdAt: true,
+      orders: {
+        orderBy: { createdAt: 'desc' },
+        select: {
+          id: true,
+          createdAt: true,
+          orderNumber: true,
+          invoiceNumber: true,
+          total: true,
+          paymentStatus: true,
+          paymentMethod: true,
+          status: true,
+          subtotal: true,
+          shipping: true,
+          items: {
+            orderBy: { id: 'asc' },
+            select: {
+              id: true,
+              imageUrl: true,
+              name: true,
+              stockNumber: true,
+              quantity: true,
+              condition: true,
+              warranty: true,
+              lineTotal: true,
+            },
+          },
+        },
+      },
+    },
   })
 
-  if (!customer?.passwordHash) notFound()
+  if (!customer || (!customer.passwordHash && customer.source !== 'woocommerce')) notFound()
 
   const lifetimeTotal = customer.orders.reduce((sum, order) => sum + order.total, 0)
   const paidTotal = customer.orders
@@ -41,7 +77,7 @@ export default async function AdminUserDetailsPage({ params }: UserDetailsPagePr
 
         <header className={styles.profileHeader}>
           <div>
-            <span className={styles.eyebrow}>REGISTERED CUSTOMER</span>
+            <span className={styles.eyebrow}>{customer.passwordHash ? 'REGISTERED CUSTOMER' : 'IMPORTED CUSTOMER · PASSWORD SETUP NEEDED'}</span>
             <h1>{customer.fullName || 'Name not provided'}</h1>
             <div className={styles.contact}>
               <a href={`mailto:${customer.email}`}>{customer.email}</a>

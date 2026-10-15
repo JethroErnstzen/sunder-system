@@ -1,6 +1,9 @@
 .page { min-height:75vh; padding:34px 28px 80px; background:#f4f6fa; color:#111827; }
 .shell { width:min(1280px,100%); margin:0 auto; }
 .header { display:flex; align-items:flex-end; justify-content:space-between; gap:24px; margin-bottom:22px; }
+.headerActions { display:flex; align-items:center; gap:12px; }
+.importLink { padding:12px 15px; border-radius:7px; background:#101827; color:#fff; font-size:13px; font-weight:800; text-decoration:none; white-space:nowrap; }
+.importLink:hover { background:#25334a; }
 .eyebrow { color:#66748a; font-size:10px; font-weight:850; letter-spacing:.13em; }
 .header h1,.profileHeader h1 { margin:8px 0 7px; font-size:clamp(36px,5vw,50px); letter-spacing:-.045em; }
 .header p { margin:0; color:#667085; }
@@ -64,6 +67,7 @@
 @media (max-width:560px) {
   .page { padding:24px 14px 55px; }
   .header { align-items:flex-start; flex-direction:column; }
+  .headerActions { width:100%; align-items:stretch; flex-direction:column-reverse; }
   .search { flex-wrap:wrap; }
   .search input { flex-basis:100%; }
   .profileMetrics { width:100%; }
