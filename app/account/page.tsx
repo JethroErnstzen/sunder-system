@@ -3,15 +3,22 @@ import { getCurrentCustomer } from '@/lib/customer-auth'
 import { prisma } from '@/lib/prisma'
 import SignOutButton from '@/app/components/SignOutButton'
 import { CustomerLoginForm } from '@/app/components/CustomerAccountForms'
+import CustomerProfileEditor from '@/app/components/CustomerProfileEditor'
 import styles from './account.module.css'
 
-const money = (amount: number) => `R ${amount.toLocaleString('en-ZA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+const money = (amount: number) => `R${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+const paymentLabels: Record<string, string> = {
+  stitch: 'Stitch Express',
+  stitchPayLater: 'Stitch Pay Later',
+  eft: 'EFT / Bank transfer',
+  payflex: 'Payflex',
+}
 
 export default async function AccountPage() {
   const customer = await getCurrentCustomer()
   if (!customer) {
     return (
-      <main className={styles.page}>
+      <main className={`${styles.page} ${styles.signInPage}`}>
         <div className={styles.shell}>
           <header className={styles.header}>
             <div>
@@ -41,6 +48,24 @@ export default async function AccountPage() {
     include: { items: { orderBy: { id: 'asc' } } },
   })
 
+  const editableProfile = {
+    email: customer.email,
+    fullName: customer.fullName || '',
+    phone: customer.phone || '',
+    addresses: customer.addresses.map((address) => ({
+      id: address.id,
+      label: address.label,
+      recipientName: address.recipientName || customer.fullName || '',
+      phone: address.phone || customer.phone || '',
+      addressLine1: address.addressLine1,
+      suburb: address.suburb,
+      city: address.city,
+      province: address.province,
+      postalCode: address.postalCode,
+      isDefault: address.isDefault,
+    })),
+  }
+
   return (
     <main className={styles.page}>
       <div className={styles.shell}>
@@ -53,6 +78,8 @@ export default async function AccountPage() {
           </div>
           <SignOutButton />
         </header>
+
+        <CustomerProfileEditor profile={editableProfile} />
 
         <section className={styles.orders}>
           <div className={styles.ordersHeading}>
@@ -68,21 +95,43 @@ export default async function AccountPage() {
           ) : (
             <div className={styles.orderList}>
               {orders.map((order) => (
-                <article className={styles.order} key={order.id}>
-                  <div className={styles.orderHeading}>
+                <details className={styles.order} key={order.id}>
+                  <summary className={styles.orderHeading}>
                     <div><span>Order</span><strong>{order.orderNumber}</strong></div>
                     <div><span>{order.createdAt.toLocaleDateString('en-ZA')}</span><strong>{money(order.total)}</strong></div>
+                    <span className={styles.expandHint}>View details</span>
+                  </summary>
+                  <div className={styles.orderDetail}>
+                    <div className={styles.orderStatus}>
+                      <span>Order: {order.status.replaceAll('_', ' ')}</span>
+                      <span>Payment: {order.paymentStatus.replaceAll('_', ' ')}</span>
+                      {order.paymentMethod && <span>Method: {paymentLabels[order.paymentMethod] || order.paymentMethod}</span>}
+                      {order.invoiceNumber && <span>Invoice: INV-{String(order.invoiceNumber).padStart(6, '0')}</span>}
+                      {order.couponCode && <span>Discount: {order.couponCode} · saved {money(order.discount)}</span>}
+                    </div>
+                    <ul>
+                      {order.items.map((item) => (
+                        <li key={item.id}>
+                          <div><strong>{item.name}</strong><small>{item.stockNumber} · Qty {item.quantity}{item.condition ? ` · ${item.condition}` : ''}{item.warranty ? ` · Warranty: ${item.warranty}` : ''}</small></div>
+                          <span>{money(item.lineTotal)}</span>
+                        </li>
+                      ))}
+                    </ul>
+                    <div className={styles.orderTotals}>
+                      <span>Subtotal <strong>{money(order.subtotal)}</strong></span>
+                      {order.discount > 0 && <span>Discount <strong>−{money(order.discount)}</strong></span>}
+                      {order.shipping > 0 && <span>Shipping <strong>{money(order.shipping)}</strong></span>}
+                      {order.tax > 0 && <span>VAT <strong>{money(order.tax)}</strong></span>}
+                      <span className={styles.grandTotal}>Total <strong>{money(order.total)}</strong></span>
+                    </div>
+                    {(order.billingAddress || order.shippingAddress) && (
+                      <div className={styles.orderAddresses}>
+                        {order.billingAddress && <div><strong>Billing address</strong><span>{[order.firstName, order.lastName].filter(Boolean).join(' ')}</span><span>{[order.billingAddress, order.billingSuburb, order.billingCity, order.billingProvince, order.billingPostalCode].filter(Boolean).join(', ')}</span></div>}
+                        {order.shippingAddress && <div><strong>Delivery address</strong><span>{[order.shippingAddress, order.shippingSuburb, order.shippingCity, order.shippingProvince, order.shippingPostalCode].filter(Boolean).join(', ')}</span></div>}
+                      </div>
+                    )}
                   </div>
-                  <div className={styles.orderStatus}>
-                    <span>Order: {order.status.replaceAll('_', ' ')}</span>
-                    <span>Payment: {order.paymentStatus.replaceAll('_', ' ')}</span>
-                    {order.paymentMethod && <span>Method: {order.paymentMethod === 'stitchPayLater' ? 'Stitch Pay Later' : order.paymentMethod}</span>}
-                    {order.couponCode && <span>Discount: {order.couponCode} · saved {money(order.discount)}</span>}
-                  </div>
-                  <ul>
-                    {order.items.map((item) => <li key={item.id}>{item.name} <span>× {item.quantity} · {money(item.lineTotal)}</span></li>)}
-                  </ul>
-                </article>
+                </details>
               ))}
             </div>
           )}

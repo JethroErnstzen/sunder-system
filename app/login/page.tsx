@@ -3,7 +3,7 @@ import { CustomerLoginForm } from '@/app/components/CustomerAccountForms'
 
 export default function LoginPage() {
   return (
-    <main className="simple-page account-page">
+    <main className="simple-page account-page signin-page">
       <Link href="/">← Back to Sunder</Link>
       <h1>Sign in</h1>
       <p>Access your Sunder account and order history.</p>

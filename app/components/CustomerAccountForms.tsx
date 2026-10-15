@@ -101,7 +101,7 @@ export function CustomerLoginForm() {
   }
 
   return (
-    <form className={styles.form} onSubmit={submit}>
+    <form className={`${styles.form} ${styles.compact}`} onSubmit={submit}>
       <label>Email address<input type="email" name="email" autoComplete="email" required maxLength={254} /></label>
       <label>Password<input type="password" name="password" autoComplete="current-password" required /></label>
       {error && <p className={styles.error} role="alert">{error}</p>}

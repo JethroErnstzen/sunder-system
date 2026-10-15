@@ -47,12 +47,14 @@ export async function sendEmail({
   text,
   html,
   attachments,
+  replyTo,
 }: {
   to: string
   subject: string
   text: string
   html?: string
   attachments?: MailAttachment[]
+  replyTo?: string
 }) {
   const config = getMailConfig()
   const transporter = nodemailer.createTransport({
@@ -69,6 +71,7 @@ export async function sendEmail({
     text,
     ...(html ? { html } : {}),
     ...(attachments ? { attachments } : {}),
+    ...(replyTo ? { replyTo } : {}),
   })
 }
 

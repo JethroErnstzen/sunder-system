@@ -8,6 +8,7 @@ import styles from './contact.module.css'
 export default function ContactPage() {
   const [sent, setSent] = useState('')
   const [contactError, setContactError] = useState('')
+  const [emailBusy, setEmailBusy] = useState(false)
 
   function readMessage(formElement: HTMLFormElement) {
     if (!formElement.reportValidity()) return null
@@ -35,15 +36,32 @@ export default function ContactPage() {
     setSent('WhatsApp opened with your message. Review it and tap Send to contact us.')
   }
 
-  function sendEmail() {
+  async function sendEmail() {
     const form = document.getElementById('contact-message-form') as HTMLFormElement | null
     if (!form) return
     const details = readMessage(form)
     if (!details) return
-    const subject = `Website enquiry from ${details.name}`
-    const body = `Name: ${details.name}\nReply to: ${details.contact}\n\nMessage:\n${details.message}`
-    window.location.href = `mailto:sales@sunder.co.za?${new URLSearchParams({ subject, body }).toString()}`
-    setSent('Your email app is opening with the message ready to send to sales@sunder.co.za.')
+    setEmailBusy(true)
+    setSent('')
+    setContactError('')
+    try {
+      const response = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(details),
+      })
+      const result = await response.json()
+      if (!response.ok) {
+        setContactError(result.error || 'We could not send your message right now.')
+        return
+      }
+      setSent(result.message || 'Your message has been sent to Sunder Computers.')
+      form.reset()
+    } catch {
+      setContactError('We could not send your message right now. Please try WhatsApp or contact sales@sunder.co.za.')
+    } finally {
+      setEmailBusy(false)
+    }
   }
 
   return (
@@ -111,10 +129,10 @@ export default function ContactPage() {
           {contactError && <p className={styles.error} role="alert">{contactError}</p>}
           <div className={styles.sendActions}>
             <button type="submit">Send via WhatsApp <span aria-hidden="true">↗</span></button>
-            <button type="button" className={styles.emailButton} onClick={sendEmail}>Send via email <span aria-hidden="true">↗</span></button>
+            <button type="button" className={styles.emailButton} onClick={sendEmail} disabled={emailBusy}>{emailBusy ? 'Sending…' : 'Send via email'} <span aria-hidden="true">{emailBusy ? '' : '↗'}</span></button>
           </div>
           {sent && <p className={styles.sent} role="status">{sent}</p>}
-          <small>Your chosen app opens with the message ready. Review it and tap Send.</small>
+          <small>WhatsApp opens with your message ready. Email enquiries are sent directly to our team.</small>
         </form>
       </section>
 

@@ -162,16 +162,7 @@ export default function GoogleReviews() {
               target="_blank"
               rel="noopener noreferrer"
             >
-              Read all Google reviews
-              <span aria-hidden="true">↗</span>
-            </a>
-            <a
-              href={googleReviewSnapshot.googleReviewsUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={styles.writeReview}
-            >
-              Write a review
+              View us on Google
               <span aria-hidden="true">↗</span>
             </a>
           </div>

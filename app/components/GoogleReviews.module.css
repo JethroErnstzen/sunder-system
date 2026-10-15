@@ -238,12 +238,6 @@
   text-decoration: none;
 }
 
-.actions .writeReview {
-  background: #1a73e8;
-  border-color: #1a73e8;
-  color: #fff;
-}
-
 .visuallyHidden {
   position: absolute;
   width: 1px;
