@@ -172,7 +172,7 @@ function address(line1: string | null, suburb: string | null, city: string | nul
 }
 
 export async function createPayflexOrder(order: PayflexCheckoutOrder, merchantReference: string) {
-  const payload = await apiRequest('/order', 'POST', {
+  const response = await apiRequest('/order', 'POST', {
     amount: Number(order.total.toFixed(2)),
     consumer: {
       phoneNumber: order.phone || '',
@@ -199,6 +199,10 @@ export async function createPayflexOrder(order: PayflexCheckoutOrder, merchantRe
     taxAmount: Number(order.tax.toFixed(2)),
     shippingAmount: Number(order.shipping.toFixed(2)),
   })
+
+  const payload = typeof response.data === 'object' && response.data !== null
+    ? response.data as Record<string, unknown>
+    : response
 
   const orderId = typeof payload.orderId === 'string' ? payload.orderId : ''
   const redirectUrl = typeof payload.redirectUrl === 'string' ? payload.redirectUrl : ''

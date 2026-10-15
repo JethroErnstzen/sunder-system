@@ -29,6 +29,19 @@ type OrderConfirmation = {
 
 const money = (value: number) => `R ${value.toLocaleString('en-ZA')}`
 
+function paymentRedirectUrl(method: string, result: Record<string, unknown>) {
+  const value = method === 'stitch' ? result.paymentUrl : result.redirectUrl
+  if (typeof value !== 'string' || !value.trim()) return null
+  try {
+    const url = new URL(value)
+    if (url.protocol !== 'https:') return null
+    if (method === 'payflex' && !['checkout.uat.payflex.co.za', 'checkout.payflex.co.za'].includes(url.hostname)) return null
+    return url.toString()
+  } catch {
+    return null
+  }
+}
+
 function isEligibleOfficeDevice(item: CartItem) {
   if (item.isLaptop === true) return true
   const category = (item.category || '').toLowerCase()
@@ -193,21 +206,24 @@ export default function CheckoutPage() {
         setSubmitError(result.error || 'Unable to place your order. Please review your details and try again.')
         return
       }
+      const responsePaymentMethod = typeof result.paymentMethod === 'string'
+        ? result.paymentMethod.toLowerCase()
+        : paymentMethod
       const confirmation: OrderConfirmation = {
         orderId: result.orderId,
         orderNumber: result.orderNumber,
         total: result.total,
-        paymentMethod: result.paymentMethod || paymentMethod,
+        paymentMethod: responsePaymentMethod,
         email: value('email'),
       }
       setSubmitted(confirmation)
       localStorage.removeItem('sunder-cart')
       window.dispatchEvent(new Event('sunder-cart-updated'))
 
-      if (result.paymentMethod === 'stitch' || result.paymentMethod === 'payflex') {
-        const provider = result.paymentMethod === 'payflex' ? 'Payflex' : 'Stitch'
+      if (responsePaymentMethod === 'stitch' || responsePaymentMethod === 'payflex') {
+        const provider = responsePaymentMethod === 'payflex' ? 'Payflex' : 'Stitch'
         try {
-          const paymentResponse = await fetch(`/api/payments/${result.paymentMethod}/checkout`, {
+          const paymentResponse = await fetch(`/api/payments/${responsePaymentMethod}/checkout`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ orderId: result.orderId, email: value('email') }),
@@ -220,7 +236,12 @@ export default function CheckoutPage() {
             })
             return
           }
-          window.location.assign(paymentResult.paymentUrl || paymentResult.redirectUrl)
+          const redirectUrl = paymentRedirectUrl(responsePaymentMethod, paymentResult)
+          if (!redirectUrl) {
+            setSubmitted({ ...confirmation, paymentError: `${provider} did not return a valid secure checkout link. Please retry or choose EFT.` })
+            return
+          }
+          window.location.href = redirectUrl
         } catch {
           setSubmitted({
             ...confirmation,
@@ -268,7 +289,12 @@ export default function CheckoutPage() {
                         setRetryPaymentError(result.error || `${provider} checkout could not be started.`)
                         return
                       }
-                      window.location.assign(result.paymentUrl || result.redirectUrl)
+                      const redirectUrl = paymentRedirectUrl(submitted.paymentMethod, result)
+                      if (!redirectUrl) {
+                        setRetryPaymentError(`${provider} did not return a valid secure checkout link. Please try again or choose EFT.`)
+                        return
+                      }
+                      window.location.href = redirectUrl
                     } catch {
                       setRetryPaymentError(`${provider} checkout could not be started. Please try again.`)
                     } finally {
