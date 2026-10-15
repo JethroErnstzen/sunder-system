@@ -12,6 +12,7 @@ type InvoiceItem = {
 
 type OrderForEmail = {
   orderNumber: string
+  status?: string
   invoiceNumber: number | null
   createdAt: Date
   email: string
@@ -216,6 +217,7 @@ export async function sendOrderEmails(order: OrderForEmail) {
       `Company: ${order.companyName || 'Private individual'}`,
       `Payment method: ${method}`,
       `Payment status: ${paymentState}`,
+      ...(order.status === 'stock_review' ? ['Fulfilment alert: Payment succeeded, but stock needs manual review before dispatch.'] : []),
       ...(order.couponCode ? [`Discount code: ${order.couponCode} (-${money(order.discount || 0)})`] : []),
       `Total: ${money(order.total)}`,
       '',

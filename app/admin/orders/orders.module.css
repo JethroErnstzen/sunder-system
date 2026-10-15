@@ -46,6 +46,7 @@
 .resendButton { border:0; border-radius:7px; background:#eef3ff; color:#2148aa; padding:9px 12px; font:inherit; font-size:12px; font-weight:800; cursor:pointer; }
 .resendButton:disabled { opacity:.65; cursor:wait; }
 .emailSuccess,.emailFailure { font-size:12px; }
+.emailPending { color:#667085; font-size:12px; }
 .emailSuccess { color:#157347; }
 .emailFailure { color:#b42318; }
 

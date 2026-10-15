@@ -146,7 +146,9 @@ export default async function AdminOrdersPage() {
                     </div>
                   </div>
                   <div className={styles.orderEmailActions}>
-                    <ResendOrderEmailsButton orderId={order.id} />
+                    {order.paymentMethod === 'payflex' && !paid
+                      ? <span className={styles.emailPending}>Invoice and sales alert send after Payflex confirms payment.</span>
+                      : <ResendOrderEmailsButton orderId={order.id} />}
                   </div>
                 </article>
               )

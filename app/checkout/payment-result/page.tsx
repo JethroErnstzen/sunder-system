@@ -9,6 +9,7 @@ type PaymentResult = {
   verified: boolean
   provider: 'Stitch' | 'Payflex'
   status?: string
+  fulfillmentReview?: boolean
 }
 
 export default async function StitchPaymentResultPage({
@@ -55,7 +56,9 @@ export default async function StitchPaymentResultPage({
           {result.orderNumber && <p>Order {result.orderNumber}</p>}
           <p>
             {result.paid
-              ? `${result.provider} confirmed your payment. Your order is being prepared.`
+              ? result.fulfillmentReview
+                ? `${result.provider} confirmed your payment. Sunder Computers will contact you to confirm product availability.`
+                : `${result.provider} confirmed your payment. Your order is being prepared.`
               : terminalFailure
                 ? 'This payment was cancelled, declined, or abandoned. Please contact Sunder Computers to arrange another payment method.'
                 : result.verified

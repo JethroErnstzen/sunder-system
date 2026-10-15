@@ -94,6 +94,7 @@ export async function POST(request: Request) {
     const total = subtotal - discount + (officeAddon ? OFFICE_PRICE : 0)
     const tax = total - total / 1.15
     const paymentMethod = total === 0 ? 'coupon' : requestedPaymentMethod
+    const deferPayflexSale = paymentMethod === 'payflex' && total > 0
     if (officeAddon) {
       orderItems.push({
         stockNumber: 'OFFICE-2021',
@@ -120,42 +121,44 @@ export async function POST(request: Request) {
 
     stage = 'saving order and invoice number'
     const order = await prisma.$transaction(async (transaction) => {
-      // Claim each physical item in the same transaction as the order. The
-      // conditional decrement prevents two checkouts from claiming the last unit.
-      for (const item of orderItems) {
-        if (!item.productId) continue
-        const claimed = await transaction.product.updateMany({
-          where: {
-            id: item.productId,
-            websiteActive: true,
-            status: 'active',
-            quantity: { gte: item.quantity },
-          },
-          data: { quantity: { decrement: item.quantity } },
-        })
-        if (claimed.count !== 1) {
-          throw new Error(`STOCK_UNAVAILABLE:${item.stockNumber}`)
-        }
-        const remaining = await transaction.product.findUnique({
-          where: { id: item.productId },
-          select: { quantity: true },
-        })
-        if (remaining?.quantity === 0) {
-          const now = new Date()
-          await transaction.product.update({
-            where: { id: item.productId },
-            data: {
-              status: 'sold',
-              soldAt: now,
-              websiteActive: false,
-              googleActive: false,
-              metaActive: false,
-              takealotActive: false,
+      // A Payflex checkout is not a sale until Payflex confirms payment.
+      // Keep its stock visible and available until the verified callback.
+      if (!deferPayflexSale) {
+        for (const item of orderItems) {
+          if (!item.productId) continue
+          const claimed = await transaction.product.updateMany({
+            where: {
+              id: item.productId,
+              websiteActive: true,
+              status: 'active',
+              quantity: { gte: item.quantity },
             },
+            data: { quantity: { decrement: item.quantity } },
           })
+          if (claimed.count !== 1) {
+            throw new Error(`STOCK_UNAVAILABLE:${item.stockNumber}`)
+          }
+          const remaining = await transaction.product.findUnique({
+            where: { id: item.productId },
+            select: { quantity: true },
+          })
+          if (remaining?.quantity === 0) {
+            const now = new Date()
+            await transaction.product.update({
+              where: { id: item.productId },
+              data: {
+                status: 'sold',
+                soldAt: now,
+                websiteActive: false,
+                googleActive: false,
+                metaActive: false,
+                takealotActive: false,
+              },
+            })
+          }
         }
       }
-      if (coupon) {
+      if (coupon && !deferPayflexSale) {
         const currentCoupon = await transaction.coupon.findUnique({ where: { id: coupon.id } })
         if (!currentCoupon) throw new Error('COUPON_UNAVAILABLE:That discount code is no longer available.')
         try {
@@ -215,8 +218,10 @@ export async function POST(request: Request) {
       })
     })
 
-    stage = 'sending order emails'
-    await sendOrderEmails(order)
+    if (!deferPayflexSale) {
+      stage = 'sending order emails'
+      await sendOrderEmails(order)
+    }
 
     return NextResponse.json({ orderId: order.id, orderNumber: order.orderNumber, total: order.total, paymentMethod: order.paymentMethod })
   } catch (error) {

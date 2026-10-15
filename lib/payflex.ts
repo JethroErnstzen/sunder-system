@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma'
+import { sendOrderEmails } from '@/lib/order-emails'
 
 const REQUEST_TIMEOUT_MS = 15000
 const SANDBOX_API_URL = 'https://api.uat.payflex.co.za'
@@ -247,6 +248,8 @@ export async function reconcilePayflexOrder(payflexOrderId: string) {
   const status = typeof remote.orderStatus === 'string' ? remote.orderStatus.toLowerCase() : ''
   const terminalFailure = ['declined', 'abandoned', 'cancelled', 'canceled'].includes(status)
   const paid = status === 'approved'
+  let firstPaidTransition = false
+  let fulfillmentReview = false
 
   if (paid) {
     await prisma.$transaction(async (db) => {
@@ -254,10 +257,77 @@ export async function reconcilePayflexOrder(payflexOrderId: string) {
         where: { id: transaction.id, status: { in: ['pending', 'initiating'] } },
         data: { status: 'paid' },
       })
-      if (changed.count === 1) {
-        await db.order.update({ where: { id: transaction.orderId }, data: { paymentStatus: 'paid', status: 'processing' } })
+      if (changed.count !== 1) return
+      firstPaidTransition = true
+
+      const claimedItems: { productId: string; quantity: number }[] = []
+      for (const item of transaction.order.items) {
+        if (!item.productId) continue
+        const claimed = await db.product.updateMany({
+          where: { id: item.productId, quantity: { gte: item.quantity } },
+          data: { quantity: { decrement: item.quantity } },
+        })
+        if (claimed.count !== 1) {
+          fulfillmentReview = true
+          break
+        }
+        claimedItems.push({ productId: item.productId, quantity: item.quantity })
+      }
+
+      if (fulfillmentReview) {
+        // Payment succeeded, but stock changed during checkout. Undo any partial
+        // decrements and flag the paid order for a stock check instead.
+        for (const item of claimedItems) {
+          await db.product.update({ where: { id: item.productId }, data: { quantity: { increment: item.quantity } } })
+        }
+      } else {
+        for (const item of claimedItems) {
+          const remaining = await db.product.findUnique({ where: { id: item.productId }, select: { quantity: true } })
+          if (remaining?.quantity === 0) {
+            await db.product.update({
+              where: { id: item.productId },
+              data: {
+                status: 'sold',
+                soldAt: new Date(),
+                websiteActive: false,
+                googleActive: false,
+                metaActive: false,
+                takealotActive: false,
+              },
+            })
+          }
+        }
+      }
+
+      await db.order.update({
+        where: { id: transaction.orderId },
+        data: { paymentStatus: 'paid', status: fulfillmentReview ? 'stock_review' : 'processing' },
+      })
+      if (transaction.order.couponId) {
+        await db.coupon.update({ where: { id: transaction.order.couponId }, data: { usedCount: { increment: 1 } } })
       }
     })
+    if (firstPaidTransition) {
+      const paidOrder = await prisma.order.findUnique({ where: { id: transaction.orderId }, include: { items: true } })
+      if (paidOrder) {
+        try {
+          const emailResult = await sendOrderEmails(paidOrder)
+          if (!emailResult.customerEmailSent || !emailResult.adminEmailSent) {
+            console.error('[Payflex paid order email delivery incomplete]', {
+              orderNumber: paidOrder.orderNumber,
+              customerEmailSent: emailResult.customerEmailSent,
+              adminEmailSent: emailResult.adminEmailSent,
+              emailErrors: emailResult.emailErrors,
+            })
+          }
+        } catch (error) {
+          console.error('[Payflex paid order email delivery failed]', {
+            orderNumber: paidOrder.orderNumber,
+            error: error instanceof Error ? error.message : error,
+          })
+        }
+      }
+    }
   } else if (terminalFailure) {
     await prisma.$transaction(async (db) => {
       const changed = await db.paymentTransaction.updateMany({
@@ -266,25 +336,15 @@ export async function reconcilePayflexOrder(payflexOrderId: string) {
       })
       if (changed.count !== 1) return
       await db.order.update({ where: { id: transaction.orderId }, data: { paymentStatus: status, status: 'cancelled' } })
-      for (const item of transaction.order.items) {
-        if (!item.productId) continue
-        await db.product.update({ where: { id: item.productId }, data: { quantity: { increment: item.quantity } } })
-        const product = await db.product.findUnique({ where: { id: item.productId }, select: { status: true } })
-        if (product?.status === 'sold') {
-          await db.product.update({
-            where: { id: item.productId },
-            data: { status: 'active', soldAt: null, websiteActive: true },
-          })
-        }
-      }
     })
   }
 
-  const current = await prisma.order.findUnique({ where: { id: transaction.orderId }, select: { orderNumber: true, paymentStatus: true } })
+  const current = await prisma.order.findUnique({ where: { id: transaction.orderId }, select: { orderNumber: true, paymentStatus: true, status: true } })
   return {
     paid: current?.paymentStatus === 'paid',
     orderNumber: current?.orderNumber || null,
     status: current?.paymentStatus || status || 'pending',
+    fulfillmentReview: current?.status === 'stock_review',
     verified: true,
   }
 }
