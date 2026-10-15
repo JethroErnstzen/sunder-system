@@ -124,7 +124,6 @@ export default async function AdminOrdersPage() {
                       <strong>{method}</strong>
                       <span className={`${styles.badge} ${paid ? styles.paid : styles.pending}`}>{order.paymentStatus}</span>
                       <span>Order status: {order.status}</span>
-                      {order.couponCode && <span>Code: {order.couponCode} · saved {currency(order.discount)}</span>}
                     </div>
                     <div className={styles.purchased}>
                       <span className={styles.label}>PURCHASED</span>
