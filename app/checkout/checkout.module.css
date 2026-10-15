@@ -237,7 +237,8 @@
   color: #25344c;
 }
 
-.grid input {
+.grid input,
+.grid select {
   width: 100%;
   min-height: 42px;
   padding: 9px 11px;
@@ -251,7 +252,8 @@
   box-sizing: border-box;
 }
 
-.grid input:focus {
+.grid input:focus,
+.grid select:focus {
   border-color: #3263df;
   box-shadow: 0 0 0 2px rgba(50, 99, 223, .1);
 }

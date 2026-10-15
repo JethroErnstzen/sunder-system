@@ -139,6 +139,26 @@ model Customer {
   updatedAt      DateTime              @updatedAt
   orders         Order[]
   resetTokens    CustomerResetToken[]
+  addresses      CustomerAddress[]
+}
+
+model CustomerAddress {
+  id             String   @id @default(cuid())
+  customerId     String
+  label          String   @default("Home")
+  recipientName  String?
+  phone          String?
+  addressLine1   String
+  suburb         String
+  city           String
+  province       String
+  postalCode     String
+  isDefault      Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  customer       Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId, isDefault])
 }
 
 model CustomerResetToken {

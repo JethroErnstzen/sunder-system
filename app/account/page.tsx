@@ -1,15 +1,39 @@
 import Link from 'next/link'
-import { redirect } from 'next/navigation'
 import { getCurrentCustomer } from '@/lib/customer-auth'
 import { prisma } from '@/lib/prisma'
 import SignOutButton from '@/app/components/SignOutButton'
+import { CustomerLoginForm } from '@/app/components/CustomerAccountForms'
 import styles from './account.module.css'
 
 const money = (amount: number) => `R ${amount.toLocaleString('en-ZA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
 export default async function AccountPage() {
   const customer = await getCurrentCustomer()
-  if (!customer) redirect('/login?next=%2Faccount')
+  if (!customer) {
+    return (
+      <main className={styles.page}>
+        <div className={styles.shell}>
+          <header className={styles.header}>
+            <div>
+              <Link href="/" className={styles.back}>← Back to Sunder</Link>
+              <span className={styles.eyebrow}>SUNDER COMPUTERS</span>
+              <h1>My account</h1>
+              <p>Sign in to view your orders, or create an account for faster checkout.</p>
+            </div>
+          </header>
+          <section className={styles.orders}>
+            <div className={styles.ordersHeading}><div><span className={styles.eyebrow}>WELCOME BACK</span><h2>Sign in</h2></div></div>
+            <CustomerLoginForm />
+            <div className={styles.empty}>
+              <h3>New to Sunder online?</h3>
+              <p>Create an account with your contact and delivery details. Your saved address will be ready at checkout.</p>
+              <Link href="/register">Create an account</Link>
+            </div>
+          </section>
+        </div>
+      </main>
+    )
+  }
 
   const orders = await prisma.order.findMany({
     where: { email: customer.email.toLowerCase() },

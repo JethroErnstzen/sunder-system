@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { FormEvent, useEffect, useMemo, useState } from 'react'
+import { FormEvent, useEffect, useMemo, useRef, useState } from 'react'
 import styles from './checkout.module.css'
 
 type CartItem = {
@@ -25,6 +25,26 @@ type OrderConfirmation = {
   paymentMethod: string
   email: string
   paymentError?: string
+}
+
+type SavedCustomerAddress = {
+  id: string
+  label: string
+  recipientName: string | null
+  phone: string | null
+  addressLine1: string
+  suburb: string
+  city: string
+  province: string
+  postalCode: string
+  isDefault: boolean
+}
+
+type SavedCustomerProfile = {
+  email: string
+  fullName: string | null
+  phone: string | null
+  addresses: SavedCustomerAddress[]
 }
 
 const money = (value: number) => `R ${value.toLocaleString('en-ZA')}`
@@ -75,6 +95,15 @@ export default function CheckoutPage() {
   const [payflexEnvironment, setPayflexEnvironment] = useState('sandbox')
   const [stitchStatusLoading, setStitchStatusLoading] = useState(true)
   const [stitchStatusMessage, setStitchStatusMessage] = useState('')
+  const [savedProfile, setSavedProfile] = useState<SavedCustomerProfile | null>(null)
+  const [selectedSavedAddressId, setSelectedSavedAddressId] = useState('')
+  const checkoutFormRef = useRef<HTMLFormElement>(null)
+  const lastAppliedSavedAddressId = useRef('')
+
+  function setCheckoutValue(name: string, value: string, onlyIfEmpty = false) {
+    const field = checkoutFormRef.current?.elements.namedItem(name)
+    if (field instanceof HTMLInputElement && (!onlyIfEmpty || !field.value.trim())) field.value = value
+  }
 
   useEffect(() => {
     try {
@@ -119,7 +148,49 @@ export default function CheckoutPage() {
         setStitchStatusMessage('Online payment availability could not be checked. Please choose EFT.')
       })
       .finally(() => setStitchStatusLoading(false))
+
+    fetch('/api/account/profile')
+      .then(async (response) => {
+        if (!response.ok) return
+        const profile = await response.json() as SavedCustomerProfile
+        if (!profile.email || !Array.isArray(profile.addresses) || profile.addresses.length === 0) return
+        setSavedProfile(profile)
+        const defaultAddress = profile.addresses.find((address) => address.isDefault) || profile.addresses[0]
+        setSelectedSavedAddressId(defaultAddress.id)
+      })
+      .catch(() => undefined)
   }, [])
+
+  useEffect(() => {
+    if (!savedProfile || !selectedSavedAddressId || !items.length) return
+    const address = savedProfile.addresses.find((savedAddress) => savedAddress.id === selectedSavedAddressId)
+    if (!address) return
+    const selectingDifferentAddress = lastAppliedSavedAddressId.current !== address.id
+    const setAddressValue = (name: string, value: string) => setCheckoutValue(name, value, !selectingDifferentAddress)
+    const nameParts = (address.recipientName || savedProfile.fullName || '').trim().split(/\s+/).filter(Boolean)
+    setAddressValue('firstName', nameParts[0] || '')
+    setAddressValue('lastName', nameParts.slice(1).join(' '))
+    setAddressValue('email', savedProfile.email)
+    setAddressValue('mobile', address.phone || savedProfile.phone || '')
+    setAddressValue('billingAddress', address.addressLine1)
+    setAddressValue('billingSuburb', address.suburb)
+    setAddressValue('billingCity', address.city)
+    setAddressValue('billingProvince', address.province)
+    setAddressValue('billingPostalCode', address.postalCode)
+    setAddressValue('companyAddress', address.addressLine1)
+    setAddressValue('companySuburb', address.suburb)
+    setAddressValue('companyCity', address.city)
+    setAddressValue('companyProvince', address.province)
+    setAddressValue('companyPostalCode', address.postalCode)
+    if (!sameAsBilling) {
+      setAddressValue('deliveryAddress', address.addressLine1)
+      setAddressValue('deliverySuburb', address.suburb)
+      setAddressValue('deliveryCity', address.city)
+      setAddressValue('deliveryProvince', address.province)
+      setAddressValue('deliveryPostalCode', address.postalCode)
+    }
+    lastAppliedSavedAddressId.current = address.id
+  }, [customerType, items.length, sameAsBilling, savedProfile, selectedSavedAddressId])
 
   const hasLaptop = useMemo(() => items.some(isEligibleOfficeDevice), [items])
   const officePrice = 499
@@ -354,7 +425,7 @@ export default function CheckoutPage() {
           </div>
         </header>
 
-        <form className={styles.layout} onSubmit={submit}>
+        <form ref={checkoutFormRef} className={styles.layout} onSubmit={submit}>
           <div className={styles.form}>
             {hasLaptop && (
               <section className={`${styles.card} ${styles.officeCard}`}>
@@ -445,6 +516,37 @@ export default function CheckoutPage() {
                 <label>Mobile Number<input required name="mobile" /></label>
               </div>
             </section>
+
+            {savedProfile?.addresses.length ? (
+              <section className={styles.card}>
+                <div className={styles.sectionHead}>
+                  <div>
+                    <span className={styles.sectionLabel}>SAVED ADDRESSES</span>
+                    <h2>Use an address from your account</h2>
+                    <p>Choose a saved address to fill in your contact and billing details.</p>
+                  </div>
+                </div>
+                <div className={styles.grid}>
+                  <label className={styles.full}>Saved address
+                    <select value={selectedSavedAddressId} onChange={(event) => {
+                      const nextId = event.target.value
+                      lastAppliedSavedAddressId.current = ''
+                      setSelectedSavedAddressId(nextId)
+                      if (!nextId) {
+                        for (const field of ['billingAddress', 'billingSuburb', 'billingCity', 'billingProvince', 'billingPostalCode', 'companyAddress', 'companySuburb', 'companyCity', 'companyProvince', 'companyPostalCode', 'deliveryAddress', 'deliverySuburb', 'deliveryCity', 'deliveryProvince', 'deliveryPostalCode']) setCheckoutValue(field, '')
+                      }
+                    }}>
+                      <option value="">Enter a different address</option>
+                      {savedProfile.addresses.map((address) => (
+                        <option key={address.id} value={address.id}>
+                          {address.label} — {[address.addressLine1, address.suburb, address.city].filter(Boolean).join(', ')}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+              </section>
+            ) : null}
 
             {customerType === 'private' && (
               <section className={styles.card}>

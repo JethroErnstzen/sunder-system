@@ -4,6 +4,71 @@ import Link from 'next/link'
 import { FormEvent, useState } from 'react'
 import styles from './CustomerAccountForms.module.css'
 
+export function CustomerSignupForm() {
+  const [error, setError] = useState('')
+  const [busy, setBusy] = useState(false)
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setError('')
+    const form = new FormData(event.currentTarget)
+    const password = String(form.get('password') || '')
+    if (password !== String(form.get('confirmPassword') || '')) {
+      setError('The passwords do not match.')
+      return
+    }
+
+    setBusy(true)
+    try {
+      const response = await fetch('/api/account/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fullName: form.get('fullName'),
+          email: form.get('email'),
+          phone: form.get('phone'),
+          password,
+          label: form.get('label'),
+          addressLine1: form.get('addressLine1'),
+          suburb: form.get('suburb'),
+          city: form.get('city'),
+          province: form.get('province'),
+          postalCode: form.get('postalCode'),
+        }),
+      })
+      const result = await response.json()
+      if (!response.ok) {
+        setError(result.error || 'Unable to create your account. Please try again.')
+        return
+      }
+      window.location.assign('/account')
+    } catch {
+      setError('Unable to create your account right now. Please try again.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <form className={styles.form} onSubmit={submit}>
+      <label>Full name<input type="text" name="fullName" autoComplete="name" required minLength={2} maxLength={120} /></label>
+      <label>Email address<input type="email" name="email" autoComplete="email" required maxLength={254} /></label>
+      <label>Mobile number<input type="tel" name="phone" autoComplete="tel" required minLength={7} maxLength={30} /></label>
+      <label>Address name<input type="text" name="label" defaultValue="Home" required maxLength={40} /></label>
+      <label>Street address<input type="text" name="addressLine1" autoComplete="address-line1" required maxLength={200} /></label>
+      <label>Suburb<input type="text" name="suburb" autoComplete="address-level3" required maxLength={100} /></label>
+      <label>City<input type="text" name="city" autoComplete="address-level2" required maxLength={100} /></label>
+      <label>Province<input type="text" name="province" autoComplete="address-level1" required maxLength={100} /></label>
+      <label>Postal code<input type="text" name="postalCode" autoComplete="postal-code" required maxLength={20} /></label>
+      <label>Password<input type="password" name="password" autoComplete="new-password" minLength={8} maxLength={200} pattern="(?=.*[A-Z]).{8,}" title="Use at least 8 characters and include one capital letter." required /></label>
+      <label>Confirm password<input type="password" name="confirmPassword" autoComplete="new-password" minLength={8} maxLength={200} required /></label>
+      <p className={styles.note}>Use at least 8 characters and include one capital letter. Your address will be available to select at checkout.</p>
+      {error && <p className={styles.error} role="alert">{error}</p>}
+      <button type="submit" disabled={busy}>{busy ? 'Creating account…' : 'Create account'}</button>
+    </form>
+  )
+}
+
 export function CustomerLoginForm() {
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)

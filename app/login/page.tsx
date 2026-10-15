@@ -8,6 +8,7 @@ export default function LoginPage() {
       <h1>Sign in</h1>
       <p>Access your Sunder account and order history.</p>
       <CustomerLoginForm />
+      <p>New to Sunder online? <Link href="/register">Create an account</Link></p>
       <p>Need help? <a href="mailto:sales@sunder.co.za">Contact Sunder Computers</a></p>
     </main>
   )

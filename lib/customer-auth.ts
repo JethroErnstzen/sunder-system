@@ -71,6 +71,21 @@ export async function getCurrentCustomer() {
       createdAt: true,
       updatedAt: true,
       sessionVersion: true,
+      addresses: {
+        orderBy: [{ isDefault: 'desc' }, { createdAt: 'desc' }],
+        select: {
+          id: true,
+          label: true,
+          recipientName: true,
+          phone: true,
+          addressLine1: true,
+          suburb: true,
+          city: true,
+          province: true,
+          postalCode: true,
+          isDefault: true,
+        },
+      },
     },
   })
   return customer?.sessionVersion === session.sessionVersion ? customer : null
