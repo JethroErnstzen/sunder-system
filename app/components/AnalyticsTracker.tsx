@@ -1,11 +1,20 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useLayoutEffect } from 'react'
 import { usePathname } from 'next/navigation'
 import { trackAnalytics } from '@/lib/analytics-client'
 
 export default function AnalyticsTracker() {
   const pathname = usePathname()
+
+  useLayoutEffect(() => {
+    if ('scrollRestoration' in window.history) window.history.scrollRestoration = 'manual'
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' as ScrollBehavior })
+    const frame = window.requestAnimationFrame(() => {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' as ScrollBehavior })
+    })
+    return () => window.cancelAnimationFrame(frame)
+  }, [pathname])
 
   useEffect(() => {
     if (!pathname || pathname.startsWith('/admin') || pathname === '/admin-login') return
