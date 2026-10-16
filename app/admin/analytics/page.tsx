@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { isAdminAuthenticated } from '@/lib/admin-auth'
+import { locationLabel } from '@/lib/analytics-location'
 import { prisma } from '@/lib/prisma'
 import RefreshAnalytics from './RefreshAnalytics'
 import styles from './analytics.module.css'
@@ -31,29 +32,48 @@ export default async function AdminAnalyticsPage({ searchParams }: { searchParam
   const weekAfter = new Date(today.getTime() - 6 * 24 * 60 * 60 * 1000)
   const retentionAfter = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000)
   const sessionWhere = { lastSeenAt: { gte: retentionAfter } }
-  const [liveVisitors, todayVisitors, todayViews, todayCarts, todayCheckouts, recentSessions, totalSessions, weekEvents] = await Promise.all([
+  const [liveVisitors, todayVisitors, todayViews, todayCarts, todayCheckouts, recentVisitors, totalVisitors, weekEvents, locationGroups] = await Promise.all([
     prisma.analyticsSession.findMany({ where: { lastSeenAt: { gte: liveAfter } }, distinct: ['visitorKey'], select: { visitorKey: true } }),
     prisma.analyticsSession.findMany({ where: { lastSeenAt: { gte: today } }, distinct: ['visitorKey'], select: { visitorKey: true } }),
     prisma.analyticsEvent.count({ where: { createdAt: { gte: today }, eventType: { in: ['page_view', 'product_view'] } } }),
     prisma.analyticsEvent.count({ where: { createdAt: { gte: today }, eventType: 'add_to_cart' } }),
     prisma.analyticsEvent.count({ where: { createdAt: { gte: today }, eventType: 'order_submitted' } }),
-    prisma.analyticsSession.findMany({
+    prisma.analyticsSession.groupBy({
+      by: ['visitorKey'],
       where: sessionWhere,
-      orderBy: { lastSeenAt: 'desc' },
+      _max: { lastSeenAt: true },
+      _count: { _all: true },
+      orderBy: { _max: { lastSeenAt: 'desc' } },
       skip: (pageNumber - 1) * pageSize,
       take: pageSize,
-      select: {
-        sessionKey: true, firstSeenAt: true, lastSeenAt: true,
-        landingPage: true, lastPage: true, source: true, referrerHost: true,
-        campaignName: true,
-        customer: { select: { fullName: true, email: true } },
-        _count: { select: { events: true } },
-      },
     }),
-    prisma.analyticsSession.count({ where: sessionWhere }),
+    prisma.analyticsSession.findMany({ where: sessionWhere, distinct: ['visitorKey'], select: { visitorKey: true } }),
     prisma.analyticsEvent.findMany({ where: { createdAt: { gte: weekAfter }, eventType: { in: ['page_view', 'product_view', 'add_to_cart', 'order_submitted', 'sign_in', 'sign_up'] } }, select: { createdAt: true } }),
+    prisma.analyticsSession.groupBy({
+      by: ['city', 'region', 'country'],
+      where: { ...sessionWhere, city: { not: null } },
+      _count: { _all: true },
+      orderBy: { _count: { _all: 'desc' } },
+      take: 12,
+    }),
   ])
-  const pageCount = Math.max(1, Math.ceil(totalSessions / pageSize))
+  const visitorKeys = recentVisitors.map(visitor => visitor.visitorKey)
+  const latestSessions = visitorKeys.length ? await prisma.analyticsSession.findMany({
+    where: { ...sessionWhere, visitorKey: { in: visitorKeys } },
+    orderBy: { lastSeenAt: 'desc' },
+    select: {
+      visitorKey: true, firstSeenAt: true, lastSeenAt: true,
+      landingPage: true, lastPage: true, source: true, referrerHost: true, campaignName: true,
+      city: true, region: true, country: true,
+      customer: { select: { fullName: true, email: true } },
+      _count: { select: { events: true } },
+    },
+  }) : []
+  const latestByVisitor = new Map<string, (typeof latestSessions)[number]>()
+  for (const session of latestSessions) {
+    if (!latestByVisitor.has(session.visitorKey)) latestByVisitor.set(session.visitorKey, session)
+  }
+  const pageCount = Math.max(1, Math.ceil(totalVisitors.length / pageSize))
   const days = Array.from({ length: 7 }, (_, index) => {
     const date = new Date(weekAfter.getTime() + index * 24 * 60 * 60 * 1000)
     const next = new Date(date.getTime() + 24 * 60 * 60 * 1000)
@@ -68,10 +88,10 @@ export default async function AdminAnalyticsPage({ searchParams }: { searchParam
         <RefreshAnalytics />
       </header>
       <section className={styles.metrics}>
-        <article><span>Viewing now</span><strong>{liveVisitors.length}</strong><small>Active browsers · last 45 seconds</small></article>
-        <article><span>Visitors today</span><strong>{todayVisitors.length}</strong><small>Unique browser IDs · South African day</small></article>
-        <article><span>Pages viewed today</span><strong>{todayViews}</strong><small>Page and product views</small></article>
-        <article><span>Added to cart today</span><strong>{todayCarts}</strong><small>Tracked add actions</small></article>
+        <Link className={styles.metricLink} href="/admin/analytics/report/active-now"><span>Viewing now</span><strong>{liveVisitors.length}</strong><small>Active browsers · last 45 seconds</small></Link>
+        <Link className={styles.metricLink} href="/admin/analytics/report/today-visitors"><span>Visitors today</span><strong>{todayVisitors.length}</strong><small>Unique browser IDs · South African day</small></Link>
+        <Link className={styles.metricLink} href="/admin/analytics/report/pages-today"><span>Pages viewed today</span><strong>{todayViews}</strong><small>Page and product views</small></Link>
+        <Link className={styles.metricLink} href="/admin/analytics/report/cart-today"><span>Added to cart today</span><strong>{todayCarts}</strong><small>Tracked add actions</small></Link>
         <article><span>Orders submitted today</span><strong>{todayCheckouts}</strong><small>Includes payment awaiting confirmation</small></article>
       </section>
 
@@ -87,17 +107,28 @@ export default async function AdminAnalyticsPage({ searchParams }: { searchParam
       </section>
 
       <section className={styles.sessionPanel}>
-        <div className={styles.sectionHeading}><div><h2>Visitor journeys · last 90 days</h2><p>Open a visit to see page order, time spent, products and actions.</p></div><strong>{totalSessions} visits</strong></div>
-        {!recentSessions.length ? <div className={styles.empty}>No visitor activity has been recorded yet.</div> :
-          <div className={styles.tableWrap}><table><thead><tr><th>Visitor</th><th>First page</th><th>Last page</th><th>Source</th><th>Started</th><th>Last active</th><th>Events</th></tr></thead><tbody>
-            {recentSessions.map(session => <tr key={session.sessionKey}>
-              <td><Link href={`/admin/analytics/${session.sessionKey}`}><strong>{session.customer?.fullName || session.customer?.email || `Visit #${session.sessionKey.slice(0, 8)}`}</strong>{session.customer && <small>Customer account</small>}</Link></td>
-              <td title={session.landingPage}>{session.landingPage}</td><td title={session.lastPage}>{session.lastPage}</td>
+        <div className={styles.sectionHeading}><div><h2>Visits by location · last 90 days</h2><p>Approximate locations based on visitor network data.</p></div><Link href="/admin/analytics/report/locations">View location report →</Link></div>
+        {!locationGroups.length ? <div className={styles.empty}>No city data has been received from the hosting network yet.</div> :
+          <div className={styles.locationGrid}>{locationGroups.map((group, index) => <article className={styles.locationCard} key={`${group.city}-${group.region}-${group.country}-${index}`}>
+            <strong>{[group.city, group.region, group.country].filter(Boolean).join(', ')}</strong><span>{group._count._all} visits</span>
+          </article>)}</div>}
+      </section>
+
+      <section className={styles.sessionPanel}>
+        <div className={styles.sectionHeading}><div><h2>Visitors · last 90 days</h2><p>One row per browser ID. Open a visitor to see all their visits and activity.</p></div><strong>{totalVisitors.length} visitors</strong></div>
+        {!recentVisitors.length ? <div className={styles.empty}>No visitor activity has been recorded yet.</div> :
+          <div className={styles.tableWrap}><table><thead><tr><th>Visitor</th><th>Visits</th><th>Location</th><th>Last page</th><th>Source</th><th>Last active</th><th>Latest visit events</th></tr></thead><tbody>
+            {recentVisitors.map(visitor => {
+              const session = latestByVisitor.get(visitor.visitorKey)
+              if (!session) return null
+              return <tr key={visitor.visitorKey}>
+              <td><Link href={`/admin/analytics/visitor/${visitor.visitorKey}`}><strong>{session.customer?.fullName || session.customer?.email || `Visitor #${visitor.visitorKey.slice(0, 8)}`}</strong>{session.customer && <small>Customer account</small>}</Link></td>
+              <td>{visitor._count._all}</td><td>{locationLabel(session)}</td><td title={session.lastPage}>{session.lastPage}</td>
               <td>{session.campaignName || session.source}{session.referrerHost && <small>{session.referrerHost}</small>}</td>
-              <td>{labelDate(session.firstSeenAt)} · {time(session.firstSeenAt)}</td><td>{labelDate(session.lastSeenAt)} · {time(session.lastSeenAt)}</td><td>{session._count.events}</td>
-            </tr>)}
+              <td>{labelDate(session.lastSeenAt)} · {time(session.lastSeenAt)}</td><td>{session._count.events}</td>
+            </tr>})}
           </tbody></table></div>}
-        {totalSessions > pageSize && <nav className={styles.pagination} aria-label="Visitor journey pages">
+        {totalVisitors.length > pageSize && <nav className={styles.pagination} aria-label="Visitor pages">
           {pageNumber > 1 ? <Link href={`/admin/analytics?page=${pageNumber - 1}`}>← Newer visits</Link> : <span />}
           <span>Page {pageNumber} of {pageCount}</span>
           {pageNumber < pageCount ? <Link href={`/admin/analytics?page=${pageNumber + 1}`}>Older visits →</Link> : <span />}

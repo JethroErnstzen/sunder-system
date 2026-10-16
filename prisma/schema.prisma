@@ -158,6 +158,10 @@ model AnalyticsSession {
   campaignSource String?
   campaignMedium String?
   campaignName   String?
+  city           String?
+  region         String?
+  country        String?
+  countryCode    String?
   customer       Customer?         @relation(fields: [customerId], references: [id], onDelete: SetNull)
   events         AnalyticsEvent[]
 
@@ -165,6 +169,7 @@ model AnalyticsSession {
   @@index([firstSeenAt])
   @@index([visitorKey, firstSeenAt])
   @@index([customerId, lastSeenAt])
+  @@index([city, lastSeenAt])
 }
 
 model AnalyticsEvent {

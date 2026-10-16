@@ -79,10 +79,10 @@ export default async function ProductPage({ params }: { params: Promise<{ stockN
         <h1 className={styles.title}>{product.name}</h1>
         {(retailPrice || salePrice) && <div className={styles.priceHighlights}>
           {retailPrice && retailPrice > 0 && <div className={styles.retailLine}>Retail price: {money(retailPrice)}</div>}
+          {saved > 0 && <div className={styles.savingBanner}><span>YOU SAVE</span><strong>{money(saved)}</strong></div>}
           {salePrice && <div className={styles.previousLine}>Was: {money(listedPrice)}</div>}
         </div>}
         <div className={`${styles.price}${salePrice ? ` ${styles.specialPrice}` : ''}`}>{salePrice ? 'Now Only: ' : 'Price: '}{money(sellingPrice)} <small>incl. VAT</small></div>
-        {saved > 0 && <div className={styles.savingBanner}><span>YOU SAVE</span><strong>{money(saved)}</strong></div>}
         {retailListing && <div className={styles.retailBox}><div className={styles.retailLabel}>Retail comparison</div><div className={styles.retailSingle}><div><strong>{retailListing.retailer}</strong><span>{money(retailListing.price)}</span></div>{retailListing.url && <a href={retailListing.url} target="_blank" rel="noopener noreferrer">View retail listing ↗</a>}</div></div>}
         {sellingPrice >= 10 && <div className={styles.bnplOptions}>
           {sellingPrice >= 100 && <div className={`${styles.bnpl} ${styles.stitchBnpl}`}><StitchBNPLWidget price={sellingPrice} /></div>}

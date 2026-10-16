@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 import { isAdminAuthenticated } from '@/lib/admin-auth'
+import { locationLabel } from '@/lib/analytics-location'
 import { prisma } from '@/lib/prisma'
 import styles from '../analytics.module.css'
 import detail from './detail.module.css'
@@ -31,6 +32,7 @@ export default async function AnalyticsSessionPage({ params }: { params: Promise
   const spent = session.events.reduce((sum, event) => sum + (event.eventType === 'page_time' ? event.durationMs || 0 : 0), 0)
   const visitLength = session.lastSeenAt.getTime() - session.firstSeenAt.getTime()
   const visibleEvents = session.events.filter(event => event.eventType !== 'heartbeat')
+  const firstPage = session.landingPage || visibleEvents[0]?.path || 'Not recorded'
 
   return <main className={styles.page}>
     <div className={`${styles.shell} ${detail.shell}`}>
@@ -51,8 +53,9 @@ export default async function AnalyticsSessionPage({ params }: { params: Promise
         <article><span>Time on pages</span><strong>{elapsed(spent)}</strong></article>
         <article><span>Visit span</span><strong>{elapsed(Math.max(0, visitLength))}</strong></article>
         <article><span>Referral source</span><strong>{session.campaignName || session.source}</strong><small>{session.referrerHost || (session.source === 'direct' ? 'Direct visit' : '')}</small></article>
+        <article><span>Approximate location</span><strong>{locationLabel(session)}</strong></article>
         {(session.campaignSource || session.campaignMedium) && <article><span>Campaign</span><strong>{[session.campaignSource, session.campaignMedium].filter(Boolean).join(' / ')}</strong></article>}
-        <article><span>First page</span><strong className={detail.path}>{session.landingPage}</strong></article>
+        <article><span>First page</span><strong className={detail.path}>{firstPage}</strong></article>
         <article><span>Last page</span><strong className={detail.path}>{session.lastPage}</strong></article>
       </section>
 
@@ -63,7 +66,10 @@ export default async function AnalyticsSessionPage({ params }: { params: Promise
             <span className={detail.dot} />
             <div className={detail.eventCard}>
               <div className={detail.eventTop}><strong>{labels[event.eventType] || event.eventType}</strong><time>{dateTime(event.createdAt)}</time></div>
-              <div className={detail.eventPage}>{event.title || event.path}</div>
+              <div className={detail.eventPage}>
+                <strong>{event.path}</strong>
+                {event.title && event.title !== event.path && <span>{event.title}</span>}
+              </div>
               {event.productName && <div className={detail.product}><strong>{event.productName}</strong><span>Stock {event.productStockNumber}{event.quantity != null ? ` · Qty ${event.quantity}` : ''}</span></div>}
               {!event.productName && event.quantity != null && <div className={detail.meta}>Quantity: {event.quantity}</div>}
               {event.durationMs != null && <div className={detail.meta}>Spent {elapsed(event.durationMs)} on this page</div>}

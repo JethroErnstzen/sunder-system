@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { z } from 'zod'
 import { CUSTOMER_COOKIE, verifyCustomerSession } from '@/lib/customer-auth'
+import { getAnalyticsLocation } from '@/lib/analytics-location'
 import { prisma } from '@/lib/prisma'
 
 export const runtime = 'nodejs'
@@ -30,6 +31,7 @@ export async function POST(request: Request) {
   try {
     const data = body.data
     const now = new Date()
+    const location = getAnalyticsLocation(request.headers)
     const cookieStore = await cookies()
     const signedInToken = verifyCustomerSession(cookieStore.get(CUSTOMER_COOKIE)?.value)
     const signedIn = signedInToken ? await prisma.customer.findUnique({ where: { id: signedInToken.customerId }, select: { id: true, sessionVersion: true } }) : null
@@ -66,6 +68,10 @@ export async function POST(request: Request) {
         campaignSource: data.campaignSource?.slice(0, 120),
         campaignMedium: data.campaignMedium?.slice(0, 120),
         campaignName: data.campaignName?.slice(0, 120),
+        city: location.city,
+        region: location.region,
+        country: location.country,
+        countryCode: location.countryCode,
       },
       update: {
         visitorKey: data.visitorKey,
@@ -73,6 +79,10 @@ export async function POST(request: Request) {
         lastPage: data.path,
         lastTitle: data.title,
         ...(customerId ? { customerId } : {}),
+        ...(location.city ? { city: location.city } : {}),
+        ...(location.region ? { region: location.region } : {}),
+        ...(location.country ? { country: location.country } : {}),
+        ...(location.countryCode ? { countryCode: location.countryCode } : {}),
       },
       select: { id: true },
     })
@@ -90,6 +100,19 @@ export async function POST(request: Request) {
         paymentMethod: linkedOrder?.paymentMethod || data.paymentMethod,
         createdAt: now,
       } })
+
+      // Repair older sessions whose first page was left blank, using their earliest recorded page event.
+      const firstPageEvent = await prisma.analyticsEvent.findFirst({
+        where: { sessionId: session.id },
+        orderBy: { createdAt: 'asc' },
+        select: { path: true },
+      })
+      if (firstPageEvent) {
+        await prisma.analyticsSession.updateMany({
+          where: { id: session.id, landingPage: '' },
+          data: { landingPage: firstPageEvent.path },
+        })
+      }
     }
 
     if (customerId) {
