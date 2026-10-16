@@ -53,7 +53,7 @@ export default async function AdminAnalyticsPage({ searchParams }: { searchParam
       by: ['city', 'region', 'country'],
       where: { ...sessionWhere, city: { not: null } },
       _count: { _all: true },
-      orderBy: { _count: { _all: 'desc' } },
+      orderBy: { _count: { city: 'desc' } },
       take: 12,
     }),
   ])
