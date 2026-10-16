@@ -5,11 +5,13 @@ import styles from './users.module.css'
 export const dynamic = 'force-dynamic'
 
 type UsersPageProps = {
-  searchParams: Promise<{ q?: string }>
+  searchParams: Promise<{ q?: string; sort?: string }>
 }
 
 export default async function AdminUsersPage({ searchParams }: UsersPageProps) {
-  const query = (await searchParams).q?.trim() || ''
+  const params = await searchParams
+  const query = params.q?.trim() || ''
+  const sort = params.sort === 'oldest' ? 'oldest' : 'newest'
   const where = query
     ? {
         OR: [
@@ -24,7 +26,7 @@ export default async function AdminUsersPage({ searchParams }: UsersPageProps) {
     prisma.customer.count(),
     prisma.customer.findMany({
       where,
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: sort === 'oldest' ? 'asc' : 'desc' },
       include: {
         _count: { select: { orders: true } },
         orders: {
@@ -57,8 +59,13 @@ export default async function AdminUsersPage({ searchParams }: UsersPageProps) {
         <form className={styles.search} action="/admin/users" method="get">
           <label className={styles.visuallyHidden} htmlFor="user-search">Search customers</label>
           <input id="user-search" name="q" type="search" defaultValue={query} placeholder="Search by name, email or phone" />
+          <label className={styles.sortLabel} htmlFor="user-sort">Added</label>
+          <select id="user-sort" name="sort" defaultValue={sort}>
+            <option value="newest">Newest first</option>
+            <option value="oldest">Oldest first</option>
+          </select>
           <button type="submit">Search</button>
-          {query && <Link href="/admin/users">Clear</Link>}
+          {(query || sort !== 'newest') && <Link href={query ? `/admin/users?q=${encodeURIComponent(query)}` : '/admin/users'}>Clear</Link>}
         </form>
 
         {customers.length === 0 ? (

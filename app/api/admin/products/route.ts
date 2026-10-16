@@ -22,6 +22,14 @@ export async function PATCH(request: Request) {
     const b = await request.json();
     if (!b.id) return NextResponse.json({ error: "Product ID is required." }, { status: 400 });
 
+    if (b.lifecycleAction === "delete-sold") {
+      const soldProduct = await prisma.product.findUnique({ where: { id: b.id }, select: { id: true, status: true } });
+      if (!soldProduct) return NextResponse.json({ error: "Product not found." }, { status: 404 });
+      if (soldProduct.status !== "sold") return NextResponse.json({ error: "Only products in the sold archive can be permanently deleted here." }, { status: 409 });
+      await prisma.product.delete({ where: { id: b.id } });
+      return NextResponse.json({ success: true, deletedId: b.id });
+    }
+
     if (b.lifecycleAction === "duplicate") {
       const source = await prisma.product.findUnique({
         where: { id: b.id },

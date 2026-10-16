@@ -41,6 +41,32 @@ export async function sendPasswordResetEmail(email: string, resetUrl: string) {
   })
 }
 
+export async function sendNewAccountAlert({
+  fullName,
+  email,
+  phone,
+  createdAt,
+}: {
+  fullName: string
+  email: string
+  phone: string
+  createdAt: Date
+}) {
+  const notificationEmail = process.env.ORDER_NOTIFICATION_EMAIL?.trim() || 'sales@sunder.co.za'
+  await sendEmail({
+    to: notificationEmail,
+    subject: `New Sunder website account: ${fullName.replace(/[\r\n]+/g, ' ').slice(0, 120)}`,
+    text: [
+      'A customer created an account on the Sunder Computers website.',
+      '',
+      `Name: ${fullName}`,
+      `Email: ${email}`,
+      `Phone: ${phone}`,
+      `Created: ${createdAt.toLocaleString('en-ZA', { timeZone: 'Africa/Johannesburg' })}`,
+    ].join('\n'),
+  })
+}
+
 export async function sendEmail({
   to,
   subject,

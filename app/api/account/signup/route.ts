@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { CUSTOMER_COOKIE, createCustomerSession, customerCookieOptions, hashCustomerPassword } from '@/lib/customer-auth'
+import { sendNewAccountAlert } from '@/lib/customer-email'
 import { prisma } from '@/lib/prisma'
 
 const signupSchema = z.object({
@@ -64,8 +65,14 @@ export async function POST(request: Request) {
           },
         },
       },
-      select: { id: true, sessionVersion: true },
+      select: { id: true, sessionVersion: true, createdAt: true },
     })
+
+    try {
+      await sendNewAccountAlert({ fullName: values.fullName, email, phone: values.phone, createdAt: customer.createdAt })
+    } catch (error) {
+      console.error('New account notification email failed:', error)
+    }
 
     const response = NextResponse.json({ ok: true })
     response.cookies.set(CUSTOMER_COOKIE, createCustomerSession(customer.id, customer.sessionVersion), customerCookieOptions())

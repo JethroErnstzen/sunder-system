@@ -10,7 +10,8 @@
     "lint": "next lint",
     "db:push": "prisma db push",
     "db:studio": "prisma studio",
-    "reset:staging-catalog": "node --env-file=.env scripts/reset-staging-catalog.mjs"
+    "reset:staging-catalog": "node --env-file=.env scripts/reset-staging-catalog.mjs",
+    "clear:staging-orders": "node scripts/clear-staging-orders.mjs"
   },
   "dependencies": {
     "@prisma/client": "^6.16.2",

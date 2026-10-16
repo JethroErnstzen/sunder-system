@@ -29,30 +29,72 @@ export default async function AdminUserDetailsPage({ params }: UserDetailsPagePr
       email: true,
       fullName: true,
       phone: true,
-      passwordHash: true,
       source: true,
       createdAt: true,
+      updatedAt: true,
+      addresses: {
+        orderBy: [{ isDefault: 'desc' }, { createdAt: 'desc' }],
+        select: {
+          id: true,
+          label: true,
+          recipientName: true,
+          phone: true,
+          addressLine1: true,
+          suburb: true,
+          city: true,
+          province: true,
+          postalCode: true,
+          isDefault: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      },
       orders: {
         orderBy: { createdAt: 'desc' },
         select: {
           id: true,
           createdAt: true,
+          updatedAt: true,
           orderNumber: true,
           invoiceNumber: true,
           total: true,
           paymentStatus: true,
           paymentMethod: true,
           status: true,
+          customerType: true,
+          email: true,
+          phone: true,
+          firstName: true,
+          lastName: true,
+          companyName: true,
+          vatNumber: true,
+          registrationNumber: true,
+          billingAddress: true,
+          billingSuburb: true,
+          billingCity: true,
+          billingProvince: true,
+          billingPostalCode: true,
+          shippingAddress: true,
+          shippingSuburb: true,
+          shippingCity: true,
+          shippingProvince: true,
+          shippingPostalCode: true,
           subtotal: true,
           shipping: true,
+          tax: true,
+          officeAddon: true,
+          couponCode: true,
+          discount: true,
           items: {
             orderBy: { id: 'asc' },
             select: {
               id: true,
+              productId: true,
               imageUrl: true,
               name: true,
               stockNumber: true,
               quantity: true,
+              unitPrice: true,
               condition: true,
               warranty: true,
               lineTotal: true,
@@ -77,12 +119,12 @@ export default async function AdminUserDetailsPage({ params }: UserDetailsPagePr
 
         <header className={styles.profileHeader}>
           <div>
-            <span className={styles.eyebrow}>{customer.passwordHash ? 'REGISTERED CUSTOMER' : 'CUSTOMER · PASSWORD SETUP NEEDED'}</span>
+            <span className={styles.eyebrow}>CUSTOMER PROFILE</span>
             <h1>{customer.fullName || 'Name not provided'}</h1>
             <div className={styles.contact}>
               <a href={`mailto:${customer.email}`}>{customer.email}</a>
               {customer.phone && <a href={`tel:${customer.phone}`}>{customer.phone}</a>}
-              <span>Joined {customer.createdAt.toLocaleDateString('en-ZA')}</span>
+              <span>Added {customer.createdAt.toLocaleString('en-ZA')}</span>
             </div>
           </div>
           <div className={styles.profileMetrics}>
@@ -91,6 +133,29 @@ export default async function AdminUserDetailsPage({ params }: UserDetailsPagePr
             <article><span>PAID TOTAL</span><strong>{currency(paidTotal)}</strong></article>
           </div>
         </header>
+
+        <section className={styles.profileDetails} aria-label="Customer details">
+          <div className={styles.sectionTitle}><div><span className={styles.eyebrow}>ACCOUNT DETAILS</span><h2>Profile information</h2></div></div>
+          <dl className={styles.detailGrid}>
+            <div><dt>Full name</dt><dd>{customer.fullName || '—'}</dd></div>
+            <div><dt>Email address</dt><dd>{customer.email}</dd></div>
+            <div><dt>Phone number</dt><dd>{customer.phone || '—'}</dd></div>
+            <div><dt>Account source</dt><dd>{customer.source || '—'}</dd></div>
+            <div><dt>Customer ID</dt><dd>{customer.id}</dd></div>
+            <div><dt>Profile last updated</dt><dd>{customer.updatedAt.toLocaleString('en-ZA')}</dd></div>
+          </dl>
+        </section>
+
+        <section className={styles.addressSection} aria-label="Saved addresses">
+          <div className={styles.sectionTitle}><div><span className={styles.eyebrow}>SAVED ADDRESSES</span><h2>Addresses</h2></div><span>{customer.addresses.length} saved</span></div>
+          {!customer.addresses.length ? <p className={styles.noAddresses}>No saved addresses.</p> :
+            <div className={styles.addressGrid}>{customer.addresses.map((address) => <article className={styles.addressCard} key={address.id}>
+              <div className={styles.addressTitle}><strong>{address.label}</strong>{address.isDefault && <span>Default</span>}</div>
+              <p>{address.recipientName || customer.fullName || '—'}{address.phone ? ` · ${address.phone}` : ''}</p>
+              <p>{address.addressLine1}, {address.suburb}, {address.city}, {address.province}, {address.postalCode}</p>
+              <small>Added {address.createdAt.toLocaleDateString('en-ZA')} · Updated {address.updatedAt.toLocaleDateString('en-ZA')}</small>
+            </article>)}</div>}
+        </section>
 
         <div className={styles.sectionTitle}>
           <div><span className={styles.eyebrow}>ACCOUNT ACTIVITY</span><h2>Past orders</h2></div>
@@ -117,10 +182,21 @@ export default async function AdminUserDetailsPage({ params }: UserDetailsPagePr
                     <strong className={styles.amount}>{currency(order.total)}</strong>
                   </div>
                   <div className={styles.orderMeta}>
+                    <div><span>CUSTOMER TYPE</span><strong>{order.customerType}</strong></div>
+                    <div><span>ORDER EMAIL</span><strong>{order.email}</strong></div>
+                    <div><span>PHONE</span><strong>{order.phone || '—'}</strong></div>
+                    {order.companyName && <div><span>COMPANY</span><strong>{order.companyName}</strong></div>}
+                    {order.vatNumber && <div><span>VAT NUMBER</span><strong>{order.vatNumber}</strong></div>}
+                    {order.registrationNumber && <div><span>REGISTRATION</span><strong>{order.registrationNumber}</strong></div>}
                     <div><span>PAYMENT METHOD</span><strong>{method}</strong></div>
                     <div><span>PAYMENT STATUS</span><strong className={paid ? styles.paid : styles.pending}>{order.paymentStatus}</strong></div>
                     <div><span>ORDER STATUS</span><strong>{order.status}</strong></div>
                     <div><span>ITEMS</span><strong>{order.items.length}</strong></div>
+                    {order.billingAddress && <div><span>BILLING ADDRESS</span><strong>{[order.billingAddress, order.billingSuburb, order.billingCity, order.billingProvince, order.billingPostalCode].filter(Boolean).join(', ')}</strong></div>}
+                    {order.shippingAddress && <div><span>SHIPPING ADDRESS</span><strong>{[order.shippingAddress, order.shippingSuburb, order.shippingCity, order.shippingProvince, order.shippingPostalCode].filter(Boolean).join(', ')}</strong></div>}
+                    {order.officeAddon && <div><span>OFFICE ADD-ON</span><strong>Yes</strong></div>}
+                    {!!order.couponCode && <div><span>DISCOUNT CODE</span><strong>{order.couponCode} · {currency(order.discount)}</strong></div>}
+                    <div><span>SUBTOTAL / VAT / SHIPPING</span><strong>{currency(order.subtotal)} / {currency(order.tax)} / {currency(order.shipping)}</strong></div>
                   </div>
                   <div className={styles.items}>
                     <span className={styles.itemHeading}>PURCHASED ITEMS</span>

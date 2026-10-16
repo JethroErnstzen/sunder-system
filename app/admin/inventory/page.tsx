@@ -213,7 +213,7 @@ export default function Inventory() {
     }
   }
 
-  async function changeLifecycle(id: string, lifecycleAction: "archive" | "sold" | "restore" | "duplicate") {
+  async function changeLifecycle(id: string, lifecycleAction: "archive" | "sold" | "restore" | "duplicate" | "delete-sold") {
     if (lifecycleAction === "duplicate") {
       if (!confirm("Create a new active stock record from this sold product? The original will stay in the sold archive.")) return;
       const response = await fetch("/api/admin/products", {
@@ -230,7 +230,9 @@ export default function Inventory() {
       setStatus("active");
       return;
     }
-    const confirmation = lifecycleAction === "sold"
+    const confirmation = lifecycleAction === "delete-sold"
+      ? "Permanently delete this sold archive item? Its saved order item details will remain on the customer’s order, but this inventory archive record cannot be restored."
+      : lifecycleAction === "sold"
       ? "Mark this product as sold? It will move to the sold archive."
       : lifecycleAction === "archive"
         ? "Delete this product from active inventory? It will be removed from sale and kept in Archived so order records stay intact."
@@ -334,7 +336,7 @@ export default function Inventory() {
                   <td>
                     <button onClick={() => openEdit(p)}>Edit</button>
                         {status === "active" && <><button onClick={() => changeLifecycle(p.id, "sold")}>Mark sold</button><button onClick={() => changeLifecycle(p.id, "archive")}>Delete</button></>}
-                        {status === "sold" && <button onClick={() => changeLifecycle(p.id, "duplicate")}>Duplicate to active stock</button>}
+                        {status === "sold" && <><button onClick={() => changeLifecycle(p.id, "duplicate")}>Duplicate to active stock</button><button onClick={() => changeLifecycle(p.id, "delete-sold")}>Delete from sold archive</button></>}
                         {status === "archived" && <button onClick={() => changeLifecycle(p.id, "restore")}>Restore</button>}
                   </td>
                 </tr>
