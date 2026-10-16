@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { FormEvent, useState } from 'react'
 import styles from './CustomerAccountForms.module.css'
+import { trackAnalytics } from '@/lib/analytics-client'
 
 export function CustomerSignupForm() {
   const [error, setError] = useState('')
@@ -41,6 +42,7 @@ export function CustomerSignupForm() {
         setError(result.error || 'Unable to create your account. Please try again.')
         return
       }
+      trackAnalytics({ eventType: 'sign_up', path: '/register', title: 'Create account' })
       window.location.assign('/account')
     } catch {
       setError('Unable to create your account right now. Please try again.')
@@ -92,6 +94,7 @@ export function CustomerLoginForm() {
         setError(result.error || 'Unable to sign in. Please try again.')
         return
       }
+      trackAnalytics({ eventType: 'sign_in', path: window.location.pathname, title: 'Sign in' })
       window.location.assign('/account')
     } catch {
       setError('Unable to sign in right now. Please try again.')

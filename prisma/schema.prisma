@@ -140,6 +140,51 @@ model Customer {
   orders         Order[]
   resetTokens    CustomerResetToken[]
   addresses      CustomerAddress[]
+  analyticsSessions AnalyticsSession[]
+}
+
+model AnalyticsSession {
+  id             String            @id @default(cuid())
+  sessionKey     String            @unique
+  visitorKey     String
+  customerId     String?
+  firstSeenAt    DateTime          @default(now())
+  lastSeenAt     DateTime          @default(now())
+  landingPage    String
+  lastPage       String
+  lastTitle      String?
+  source         String            @default("direct")
+  referrerHost   String?
+  campaignSource String?
+  campaignMedium String?
+  campaignName   String?
+  customer       Customer?         @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  events         AnalyticsEvent[]
+
+  @@index([lastSeenAt])
+  @@index([firstSeenAt])
+  @@index([visitorKey, firstSeenAt])
+  @@index([customerId, lastSeenAt])
+}
+
+model AnalyticsEvent {
+  id                 String           @id @default(cuid())
+  sessionId          String
+  eventType          String
+  path               String
+  title              String?
+  productStockNumber String?
+  productName        String?
+  quantity           Int?
+  durationMs         Int?
+  paymentMethod      String?
+  details            String?
+  createdAt          DateTime         @default(now())
+  session            AnalyticsSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, createdAt])
+  @@index([eventType, createdAt])
+  @@index([createdAt])
 }
 
 model CustomerAddress {

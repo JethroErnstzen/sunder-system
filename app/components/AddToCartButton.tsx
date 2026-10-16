@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import styles from './AddToCartButton.module.css'
+import { trackAnalytics } from '@/lib/analytics-client'
 
 type Props = { product: { stockNumber:string; name:string; sellingPrice:number; listedPrice?:number; condition:string; imageUrl?:string|null; availableQuantity:number } }
 
@@ -30,6 +31,7 @@ export default function AddToCartButton({ product }: Props) {
     else existing.push({...cartItem,quantity:Math.min(product.availableQuantity,quantity)})
     localStorage.setItem('sunder-cart',JSON.stringify(existing))
     window.dispatchEvent(new Event('sunder-cart-updated'))
+    trackAnalytics({ eventType: 'add_to_cart', productStockNumber: product.stockNumber, quantity })
     setAdded(true)
   }
   function buyNow(){ addToCart(); router.push('/checkout') }

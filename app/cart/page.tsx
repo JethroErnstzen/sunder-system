@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import styles from './cart.module.css'
+import { trackAnalytics } from '@/lib/analytics-client'
 
 type CartItem = {
   stockNumber: string
@@ -36,6 +37,8 @@ export default function CartPage() {
       const normalized = [...uniqueItems.values()]
       setItems(normalized)
       localStorage.setItem('sunder-cart', JSON.stringify(normalized))
+      trackAnalytics({ eventType: 'cart_view', quantity: normalized.reduce((sum, item) => sum + item.quantity, 0) })
+      normalized.forEach(item => trackAnalytics({ eventType: 'cart_item_view', productStockNumber: item.stockNumber, quantity: item.quantity }))
     } catch {
       setItems([])
       localStorage.removeItem('sunder-cart')
@@ -54,13 +57,14 @@ export default function CartPage() {
   }
 
   function remove(stockNumber: string) {
+    trackAnalytics({ eventType: 'remove_from_cart', productStockNumber: stockNumber, quantity: 0 })
     save(items.filter(item => item.stockNumber !== stockNumber))
   }
 
   function changeQty(stockNumber: string, quantity: number) {
-    save(items.map(item => item.stockNumber === stockNumber
-      ? { ...item, quantity: Math.max(1, Math.min(item.availableQuantity || 99, quantity)) }
-      : item))
+    const next = Math.max(1, Math.min(items.find(item => item.stockNumber === stockNumber)?.availableQuantity || 99, quantity))
+    trackAnalytics({ eventType: 'cart_quantity', productStockNumber: stockNumber, quantity: next })
+    save(items.map(item => item.stockNumber === stockNumber ? { ...item, quantity: next } : item))
   }
 
   return (

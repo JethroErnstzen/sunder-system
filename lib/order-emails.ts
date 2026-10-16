@@ -192,14 +192,21 @@ export async function sendOrderEmails(order: OrderForEmail) {
   const buyerName = [order.firstName, order.lastName].filter(Boolean).join(' ') || order.companyName || order.email
   const method = paymentMethodLabel(order.paymentMethod)
   const paymentState = order.paymentStatus.toLowerCase() === 'paid' ? 'Paid' : 'Awaiting payment'
+  const awaitingEft = order.paymentMethod === 'eft' && order.paymentStatus.toLowerCase() !== 'paid'
   const notificationEmail = process.env.ORDER_NOTIFICATION_EMAIL?.trim() || 'sales@sunder.co.za'
   const customerEmail = (async () => {
     const pdf = makeInvoicePdf(order)
+    const eftText = awaitingEft
+      ? `\n\nYour order is on hold while we wait for your EFT payment. As soon as the funds reflect in our account, we’ll prepare your order and arrange dispatch.\n\nEFT bank details\nBank: FNB\nAccount name: Sunder Computers (Pty) Ltd\nAccount type: Gold Business Account\nAccount number: 63038469713\nBranch code: 220323\nPayment reference: ${order.orderNumber}\n\nWould you prefer to pay another way? Contact us at sales@sunder.co.za and we’ll help you change your payment method.`
+      : ''
+    const eftHtml = awaitingEft
+      ? `<p>Your order is currently on hold while we wait for your EFT payment. As soon as the funds reflect in our account, we’ll prepare your order and arrange dispatch.</p><h3>EFT bank details</h3><p><strong>Bank:</strong> FNB<br><strong>Account name:</strong> Sunder Computers (Pty) Ltd<br><strong>Account type:</strong> Gold Business Account<br><strong>Account number:</strong> 63038469713<br><strong>Branch code:</strong> 220323<br><strong>Payment reference:</strong> ${escapeHtml(order.orderNumber)}</p><p>If you’d prefer to use a different payment method, contact us at <a href="mailto:sales@sunder.co.za">sales@sunder.co.za</a> and we’ll assist.</p>`
+      : ''
     await sendEmail({
       to: order.email,
       subject: `VAT invoice INV-${String(order.invoiceNumber ?? 0).padStart(6, '0')} - Sunder Computers`,
-      text: `Hello ${buyerName},\n\nThank you for your order. Your VAT invoice is attached.\n\nInvoice: INV-${String(order.invoiceNumber ?? 0).padStart(6, '0')}\nPayment method: ${method}\nPayment status: ${paymentState}${order.couponCode ? `\nDiscount code: ${order.couponCode} (-${money(order.discount || 0)})` : ''}\nTotal: ${money(order.total)}\n\nWarranty terms: https://www.sunder.co.za/warranty/\n\nSunder Computers`,
-      html: `<p>Hello ${escapeHtml(buyerName)},</p><p>Thank you for your order. Your VAT invoice is attached.</p><p><strong>Invoice:</strong> INV-${String(order.invoiceNumber ?? 0).padStart(6, '0')}<br><strong>Payment method:</strong> ${escapeHtml(method)}<br><strong>Payment status:</strong> ${escapeHtml(paymentState)}${order.couponCode ? `<br><strong>Discount code:</strong> ${escapeHtml(order.couponCode)} (-${money(order.discount || 0)})` : ''}<br><strong>Total:</strong> ${money(order.total)}</p><p><a href="https://www.sunder.co.za/warranty/">View warranty terms</a></p><p>Sunder Computers</p>`,
+      text: `Hello ${buyerName},\n\nThank you for your order. Your VAT invoice is attached.\n\nInvoice: INV-${String(order.invoiceNumber ?? 0).padStart(6, '0')}\nPayment method: ${method}\nPayment status: ${paymentState}${order.couponCode ? `\nDiscount code: ${order.couponCode} (-${money(order.discount || 0)})` : ''}\nTotal: ${money(order.total)}${eftText}\n\nWarranty terms: https://www.sunder.co.za/warranty/\n\nSunder Computers`,
+      html: `<p>Hello ${escapeHtml(buyerName)},</p><p>Thank you for your order. Your VAT invoice is attached.</p><p><strong>Invoice:</strong> INV-${String(order.invoiceNumber ?? 0).padStart(6, '0')}<br><strong>Payment method:</strong> ${escapeHtml(method)}<br><strong>Payment status:</strong> ${escapeHtml(paymentState)}${order.couponCode ? `<br><strong>Discount code:</strong> ${escapeHtml(order.couponCode)} (-${money(order.discount || 0)})` : ''}<br><strong>Total:</strong> ${money(order.total)}</p>${eftHtml}<p><a href="https://www.sunder.co.za/warranty/">View warranty terms</a></p><p>Sunder Computers</p>`,
       attachments: [{ filename: `VAT-Invoice-INV-${String(order.invoiceNumber ?? 0).padStart(6, '0')}.pdf`, content: pdf, contentType: 'application/pdf' }],
     })
   })()

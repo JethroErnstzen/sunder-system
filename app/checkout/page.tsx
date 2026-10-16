@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react'
 import styles from './checkout.module.css'
+import { trackAnalytics } from '@/lib/analytics-client'
 
 type CartItem = {
   stockNumber: string
@@ -120,6 +121,8 @@ export default function CheckoutPage() {
       const normalized = [...uniqueItems.values()]
       setItems(normalized)
       localStorage.setItem('sunder-cart', JSON.stringify(normalized))
+      trackAnalytics({ eventType: 'checkout_started', quantity: normalized.reduce((sum, item) => sum + item.quantity, 0) })
+      normalized.forEach(item => trackAnalytics({ eventType: 'checkout_started', productStockNumber: item.stockNumber, quantity: item.quantity }))
     } catch {
       setItems([])
       localStorage.removeItem('sunder-cart')
@@ -287,6 +290,17 @@ export default function CheckoutPage() {
         paymentMethod: responsePaymentMethod,
         email: value('email'),
       }
+      trackAnalytics({
+        eventType: 'order_submitted',
+        paymentMethod: responsePaymentMethod as 'stitch' | 'eft' | 'payflex',
+        orderNumber: result.orderNumber,
+      })
+      items.forEach(item => trackAnalytics({
+        eventType: 'checkout_submitted',
+        productStockNumber: item.stockNumber,
+        quantity: item.quantity,
+        paymentMethod: responsePaymentMethod as 'stitch' | 'eft' | 'payflex',
+      }))
       setSubmitted(confirmation)
       localStorage.removeItem('sunder-cart')
       window.dispatchEvent(new Event('sunder-cart-updated'))

@@ -8,8 +8,9 @@ export default function SiteFooter(){return <footer className={styles.footer}>
   <div className={styles.about}>
     <Link href="/" className={styles.logo}><Image src="/sunder-logo-white.png" alt="Sunder Computers" width={190} height={49} /></Link>
    <p>Family owned and operated for the past 10 years, we’ve built a reputation for providing 5-star laptops and outstanding service.</p>
-    <nav aria-label="Footer links" style={{ display: 'flex', marginTop: 17 }}>
+    <nav aria-label="Footer links" style={{ display: 'flex', gap: 18, flexWrap: 'wrap', marginTop: 17 }}>
      <Link href="/warranty" style={{ color: '#63eaff', fontSize: 14, fontWeight: 800 }}>Warranty &amp; Returns Policy</Link>
+     <Link href="/privacy" style={{ color: '#63eaff', fontSize: 14, fontWeight: 800 }}>Privacy Notice</Link>
     </nav>
   </div>
   <div className={styles.contact}>
