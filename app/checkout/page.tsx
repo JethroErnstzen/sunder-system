@@ -612,6 +612,22 @@ export default function CheckoutPage() {
               </div>
             </section>
 
+            <section className={`${styles.card} ${styles.checkoutPaymentCard}`} aria-label="Payment method">
+              <div className={styles.paymentMethods}>
+                <div className={styles.paymentHeading}>{total === 0 ? 'Payment' : 'Payment Method'}</div>
+                {total === 0 ? <p>Your discount covers the full order. No payment method is needed.</p> : <>
+                <p role="note">{stitchStatusLoading ? 'Checking payment availability…' : paymentMethod === 'stitch' ? 'You will be redirected to Stitch Express to complete payment securely. Available payment methods depend on your Stitch account.' : paymentMethod === 'payflex' ? `You will be redirected to Payflex to complete payment securely.${total < 10 ? ' Payflex requires a minimum order of R10.' : ''}` : 'Your order will be saved awaiting EFT payment.'}</p>
+                <label className={`${styles.paymentOption} ${paymentMethod === 'stitch' ? styles.paymentSelected : ''}`}><input type="radio" name="paymentMethod" value="stitch" checked={paymentMethod === 'stitch'} disabled={!stitchAvailable || stitchStatusLoading} onChange={() => setPaymentMethod('stitch')} /><span className={styles.paymentOptionCopy}><strong>Stitch Express</strong><span>Apple Pay · Google Pay · Capitec Pay · Card · BNPL</span><small>Secure payments powered by Stitch Express</small></span><img src="https://www.sunder.co.za/wp-content/plugins/stitch-express/assets/wc-logo-v2.svg" alt="" className={styles.paymentLogo} /></label>
+                {stitchStatusMessage && <p role="status">{stitchStatusMessage}</p>}
+                <label className={`${styles.paymentOption} ${paymentMethod === 'payflex' ? styles.paymentSelected : ''}`}><input type="radio" name="paymentMethod" value="payflex" checked={paymentMethod === 'payflex'} disabled={!payflexAvailable || stitchStatusLoading} onChange={() => setPaymentMethod('payflex')} /><span className={styles.paymentOptionCopy}><strong>Payflex</strong><span>Pay over time with Payflex</span><small>{payflexAvailable ? `${payflexEnvironment === 'live' ? 'Secure Payflex checkout' : 'UAT sandbox checkout'}${total > 0 && total < 10 ? ' · R10 minimum order' : ''}` : 'Currently unavailable'}</small></span><img src="https://www.sunder.co.za/wp-content/plugins/payflex-payment-gateway/Checkout.png" alt="" className={styles.payflexLogo} /></label>
+                <label className={`${styles.paymentOption} ${paymentMethod === 'eft' ? styles.paymentSelected : ''}`}><input type="radio" name="paymentMethod" value="eft" checked={paymentMethod === 'eft'} onChange={() => setPaymentMethod('eft')} /><span className={styles.paymentOptionCopy}><strong>EFT / Bank Transfer</strong><span>Pay directly into our FNB account</span></span></label>
+                {paymentMethod === 'eft' && <div className={styles.eftDetails}><div className={styles.eftTitle}>EFT payment details</div><div className={styles.eftGrid}><div><span>Bank</span><strong>FNB</strong></div><div><span>Account Name</span><strong>Sunder Computers</strong></div><div><span>Account Number</span><strong>630 384 69713</strong></div><div><span>Branch Code</span><strong>220323</strong></div></div></div>}
+                </>}
+                {submitError && <p role="alert">{submitError}</p>}
+                <button type="submit" className={styles.summaryPaymentButton} disabled={submitting || (total > 0 && stitchStatusLoading)}>{submitting ? 'Saving order…' : total === 0 ? 'Complete order' : paymentMethod === 'stitch' ? 'Continue to Stitch Express' : paymentMethod === 'payflex' ? 'Continue to Payflex' : 'Place order request'}</button>
+              </div>
+            </section>
+
           </div>
 
           <aside className={styles.summary}>
@@ -672,20 +688,6 @@ export default function CheckoutPage() {
             <div className={styles.total}>
               <span>Total</span>
               <strong>{money(total)}</strong>
-            </div>
-
-            <div className={styles.paymentMethods}>
-              <div className={styles.paymentHeading}>{total === 0 ? 'Payment' : 'Payment Method'}</div>
-              {total === 0 ? <p>Your discount covers the full order. No payment method is needed.</p> : <>
-              <p role="note">{stitchStatusLoading ? 'Checking payment availability…' : paymentMethod === 'stitch' ? 'You will be redirected to Stitch Express to complete payment securely. Available payment methods depend on your Stitch account.' : paymentMethod === 'payflex' ? `You will be redirected to Payflex to complete payment securely.${total < 10 ? ' Payflex requires a minimum order of R10.' : ''}` : 'Your order will be saved awaiting EFT payment.'}</p>
-              <label className={`${styles.paymentOption} ${paymentMethod === 'stitch' ? styles.paymentSelected : ''}`}><input type="radio" name="paymentMethod" value="stitch" checked={paymentMethod === 'stitch'} disabled={!stitchAvailable || stitchStatusLoading} onChange={() => setPaymentMethod('stitch')} /><span className={styles.paymentOptionCopy}><strong>Stitch Express</strong><span>Apple Pay · Google Pay · Capitec Pay · Card · BNPL</span><small>Secure payments powered by Stitch Express</small></span><img src="https://www.sunder.co.za/wp-content/plugins/stitch-express/assets/wc-logo-v2.svg" alt="" className={styles.paymentLogo} /></label>
-              {stitchStatusMessage && <p role="status">{stitchStatusMessage}</p>}
-              <label className={`${styles.paymentOption} ${paymentMethod === 'payflex' ? styles.paymentSelected : ''}`}><input type="radio" name="paymentMethod" value="payflex" checked={paymentMethod === 'payflex'} disabled={!payflexAvailable || stitchStatusLoading} onChange={() => setPaymentMethod('payflex')} /><span className={styles.paymentOptionCopy}><strong>Payflex</strong><span>Pay over time with Payflex</span><small>{payflexAvailable ? `${payflexEnvironment === 'live' ? 'Secure Payflex checkout' : 'UAT sandbox checkout'}${total > 0 && total < 10 ? ' · R10 minimum order' : ''}` : 'Currently unavailable'}</small></span><img src="https://www.sunder.co.za/wp-content/plugins/payflex-payment-gateway/Checkout.png" alt="" className={styles.payflexLogo} /></label>
-              <label className={`${styles.paymentOption} ${paymentMethod === 'eft' ? styles.paymentSelected : ''}`}><input type="radio" name="paymentMethod" value="eft" checked={paymentMethod === 'eft'} onChange={() => setPaymentMethod('eft')} /><span className={styles.paymentOptionCopy}><strong>EFT / Bank Transfer</strong><span>Pay directly into our FNB account</span></span></label>
-              {paymentMethod === 'eft' && <div className={styles.eftDetails}><div className={styles.eftTitle}>EFT payment details</div><div className={styles.eftGrid}><div><span>Bank</span><strong>FNB</strong></div><div><span>Account Name</span><strong>Sunder Computers</strong></div><div><span>Account Number</span><strong>630 384 69713</strong></div><div><span>Branch Code</span><strong>220323</strong></div></div></div>}
-              </>}
-              {submitError && <p role="alert">{submitError}</p>}
-              <button type="submit" className={styles.summaryPaymentButton} disabled={submitting || (total > 0 && stitchStatusLoading)}>{submitting ? 'Saving order…' : total === 0 ? 'Complete order' : paymentMethod === 'stitch' ? 'Continue to Stitch Express' : paymentMethod === 'payflex' ? 'Continue to Payflex' : 'Place order request'}</button>
             </div>
 
             <div className={styles.benefits}>

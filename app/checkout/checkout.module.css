@@ -542,6 +542,15 @@
     font-size: 34px;
   }
 
+  .headerBadges {
+    gap: 6px;
+  }
+
+  .headerBadges span {
+    padding: 6px 8px;
+    font-size: 10px;
+  }
+
   .card,
   .summary {
     padding: 16px;
@@ -763,4 +772,5 @@
 }
 
 .paymentMethods{margin-top:20px;padding-top:18px;border-top:1px solid #e5e7eb}.paymentHeading{font-size:15px;font-weight:800;margin-bottom:10px}.paymentOption{display:flex;align-items:center;gap:10px;width:100%;padding:12px;margin-bottom:8px;border:1px solid #dfe3e8;background:#fff;cursor:pointer;text-align:left;box-sizing:border-box}.paymentOption:hover,.paymentSelected{border-color:#111827}.paymentOption input{flex:0 0 auto;width:17px;height:17px;margin:0}.paymentOptionCopy{display:flex;flex:1;min-width:0;flex-direction:column;gap:2px}.paymentOptionCopy strong{font-size:13px;color:#111827}.paymentOptionCopy span{font-size:11px;color:#5f6672;line-height:1.35}.paymentOptionCopy small{font-size:10px;color:#777f8b}.paymentLogo{width:72px;max-height:28px;object-fit:contain;flex:0 0 auto}.payflexLogo{width:68px;max-height:32px;object-fit:contain;flex:0 0 auto}.summaryPaymentButton{width:100%;margin-top:8px;border:0;background:#111827;color:#fff;min-height:48px;padding:13px 16px;font-size:14px;font-weight:800;cursor:pointer}.summaryPaymentButton:hover{background:#000}.paymentMethods .eftDetails{margin-top:10px;padding:13px;border:1px solid #dfe3e8;background:#f8fafc}.paymentMethods .eftTitle{font-size:12px;font-weight:800;margin-bottom:9px}.paymentMethods .eftGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.paymentMethods .eftGrid>div{display:flex;flex-direction:column;gap:2px}.paymentMethods .eftGrid span{font-size:9px;color:#6b7280;text-transform:uppercase;letter-spacing:.04em}.paymentMethods .eftGrid strong{font-size:11px;color:#111827}@media(max-width:640px){.paymentMethods .eftGrid{grid-template-columns:1fr}}
+.checkoutPaymentCard .paymentMethods{margin:0;padding:0;border:0}
 .couponBox{margin:17px 0 6px;padding:14px;border:1px solid #e1e6ed;background:#f8fafc}.couponBox>label{display:block;margin-bottom:8px;font-size:12px;font-weight:800;color:#253044}.couponControls{display:flex;gap:8px}.couponControls input{flex:1;min-width:0;height:42px;padding:0 11px;border:1px solid #ccd5e3;border-radius:4px;font:inherit;text-transform:uppercase}.couponControls button{min-width:78px;border:0;border-radius:4px;background:#111827;color:white;font-size:12px;font-weight:800}.couponControls button:disabled{opacity:.55}.couponSuccess,.couponError{font-size:12px;line-height:1.4;margin:8px 0 0}.couponSuccess{color:#147847}.couponError{color:#b42318}

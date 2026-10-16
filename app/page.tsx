@@ -5,6 +5,7 @@ import Image from 'next/image'
 import { useEffect,useState } from 'react'
 import ProductCard from '@/app/components/ProductCard'
 import GoogleReviews, { GoogleMark } from '@/app/components/GoogleReviews'
+import NewsletterSignup from '@/app/components/NewsletterSignup'
 import { googleReviewSnapshot } from '@/app/data/google-reviews'
 import styles from './home.module.css'
 
@@ -35,5 +36,6 @@ export default function Home(){
    </div>
   </section>
   <section className={`${styles.wrap} ${styles.footerCta}`}><div><h2>Need help choosing?</h2><p>Talk to Sunder Computers in Bellville or browse the current stock online.</p></div><Link href="https://wa.me/27610571714">WhatsApp us</Link></section>
+  <NewsletterSignup />
  </main>
 }
