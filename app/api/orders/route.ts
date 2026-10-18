@@ -95,6 +95,7 @@ export async function POST(request: Request) {
     const tax = total - total / 1.15
     const paymentMethod = total === 0 ? 'coupon' : requestedPaymentMethod
     const deferPayflexSale = paymentMethod === 'payflex' && total > 0
+    const deferPaymentEmails = total > 0 && ['payflex', 'stitch', 'stitchPayLater'].includes(paymentMethod)
     if (officeAddon) {
       orderItems.push({
         stockNumber: 'OFFICE-2021',
@@ -218,7 +219,7 @@ export async function POST(request: Request) {
       })
     })
 
-    if (!deferPayflexSale) {
+    if (!deferPaymentEmails) {
       stage = 'sending order emails'
       await sendOrderEmails(order)
     }

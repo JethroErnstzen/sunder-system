@@ -15,8 +15,8 @@ export async function POST(_request: Request, { params }: { params: Promise<{ or
       include: { items: { orderBy: { id: 'asc' } } },
     })
     if (!order) return NextResponse.json({ error: 'Order not found.' }, { status: 404 })
-    if (order.paymentMethod === 'payflex' && order.paymentStatus.toLowerCase() !== 'paid') {
-      return NextResponse.json({ error: 'Payflex has not confirmed payment. The invoice and sales alert will be sent after successful payment.' }, { status: 409 })
+    if (['payflex', 'stitch', 'stitchPayLater'].includes(order.paymentMethod || '') && order.paymentStatus.toLowerCase() !== 'paid') {
+      return NextResponse.json({ error: 'The payment provider has not confirmed payment. The invoice and sales alert will be sent after successful payment.' }, { status: 409 })
     }
 
     const result = await sendOrderEmails(order)

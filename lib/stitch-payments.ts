@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma'
+import { sendOrderEmails } from '@/lib/order-emails'
 
 const EXPRESS_BASE_URL = 'https://express.stitch.money'
 const REQUEST_TIMEOUT_MS = 15000
@@ -245,16 +246,45 @@ export async function markStitchPaymentFromExpress(paymentId: string, reference:
     throw new StitchCheckoutError('STITCH_AMOUNT_MISMATCH', 'The verified payment amount does not match the order.')
   }
 
+  let firstPaidTransition = false
   await prisma.$transaction(async (db) => {
-    await db.paymentTransaction.update({
-      where: { id: transaction.id },
+    const changed = await db.paymentTransaction.updateMany({
+      where: { id: transaction.id, status: { in: ['pending', 'initiating'] } },
       data: { status: 'paid', externalId: paymentId },
     })
-    await db.order.update({
-      where: { id: transaction.order.id },
+    if (changed.count !== 1) return
+
+    const orderChanged = await db.order.updateMany({
+      where: { id: transaction.order.id, paymentStatus: { not: 'paid' } },
       data: { paymentStatus: 'paid', status: 'processing' },
     })
+    firstPaidTransition = orderChanged.count === 1
   })
+
+  if (firstPaidTransition) {
+    const paidOrder = await prisma.order.findUnique({
+      where: { id: transaction.order.id },
+      include: { items: { orderBy: { id: 'asc' } } },
+    })
+    if (paidOrder) {
+      try {
+        const emailResult = await sendOrderEmails(paidOrder)
+        if (!emailResult.customerEmailSent || !emailResult.adminEmailSent) {
+          console.error('[Stitch paid order email delivery incomplete]', {
+            orderNumber: paidOrder.orderNumber,
+            customerEmailSent: emailResult.customerEmailSent,
+            adminEmailSent: emailResult.adminEmailSent,
+            emailErrors: emailResult.emailErrors,
+          })
+        }
+      } catch (error) {
+        console.error('[Stitch paid order email delivery failed]', {
+          orderNumber: paidOrder.orderNumber,
+          error: error instanceof Error ? error.message : error,
+        })
+      }
+    }
+  }
   return { paid: true, orderId: transaction.order.id, orderNumber: transaction.order.orderNumber }
 }
 
